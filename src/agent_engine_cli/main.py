@@ -42,7 +42,7 @@ def list_agents(
         table.add_column("Display Name", style="green")
         table.add_column("Created")
         table.add_column("Updated")
-        table.add_column("Identity")
+        table.add_column("Identity", overflow="fold")
 
         for agent in agents:
             # v1beta1 api_resource uses 'name' instead of 'resource_name'
