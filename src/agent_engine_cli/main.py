@@ -100,12 +100,17 @@ def get_agent(
             create_time = str(getattr(agent, "create_time", "")) or "N/A"
             update_time = str(getattr(agent, "update_time", "")) or "N/A"
 
+            effective_identity = "N/A"
+            if hasattr(agent, "spec") and agent.spec and hasattr(agent.spec, "effective_identity"):
+                effective_identity = agent.spec.effective_identity
+
             content = (
                 f"[bold]Name:[/bold] {name}\n"
                 f"[bold]Display Name:[/bold] {display_name}\n"
                 f"[bold]Description:[/bold] {description}\n"
                 f"[bold]Created:[/bold] {create_time}\n"
-                f"[bold]Updated:[/bold] {update_time}"
+                f"[bold]Updated:[/bold] {update_time}\n"
+                f"[bold]Effective Identity:[/bold] {effective_identity}"
             )
             console.print(Panel(content, title="Agent Details"))
     except Exception as e:
