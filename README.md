@@ -23,6 +23,24 @@ This project is set up to work seamlessly with `uv`.
     ae --help
     ```
 
+## Running Without Installation
+
+You can run the CLI directly without installing it:
+
+```bash
+# Using uv (recommended)
+uv run python -m agent_engine_cli.main --help
+
+# Or with plain Python (after installing dependencies)
+python -m agent_engine_cli.main --help
+```
+
+Example commands:
+```bash
+uv run python -m agent_engine_cli.main list -p PROJECT_ID -l us-central1
+uv run python -m agent_engine_cli.main get AGENT_ID -p PROJECT_ID -l us-central1
+```
+
 ## Development
 
 To run tests:
