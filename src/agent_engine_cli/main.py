@@ -42,6 +42,7 @@ def list_agents(
         table.add_column("Display Name", style="green")
         table.add_column("Created")
         table.add_column("Updated")
+        table.add_column("Identity")
 
         for agent in agents:
             # v1beta1 api_resource uses 'name' instead of 'resource_name'
@@ -62,7 +63,11 @@ def list_agents(
             else:
                 update_time = ""
 
-            table.add_row(name, display_name, create_time, update_time)
+            effective_identity = "N/A"
+            if hasattr(agent, "spec") and agent.spec:
+                effective_identity = getattr(agent.spec, "effective_identity", "N/A")
+
+            table.add_row(name, display_name, create_time, update_time, effective_identity)
 
         console.print(table)
     except Exception as e:
@@ -82,26 +87,36 @@ def get_agent(
         client = AgentEngineClient(project=project, location=location)
         agent = client.get_agent(agent_id)
 
+        # v1beta1 api_resource uses 'name' instead of 'resource_name'
+        agent_resource_name = getattr(agent, "name", None) or getattr(agent, "resource_name", "")
+
         if full:
             agent_dict = {
-                "resource_name": agent.resource_name,
+                "resource_name": agent_resource_name,
                 "display_name": getattr(agent, "display_name", None),
                 "description": getattr(agent, "description", None),
                 "create_time": str(getattr(agent, "create_time", None)),
                 "update_time": str(getattr(agent, "update_time", None)),
             }
-            if hasattr(agent, "spec") and agent.spec:
+            api_resource = getattr(agent, "api_resource", None)
+            if api_resource and hasattr(api_resource, "spec") and api_resource.spec:
+                agent_dict["spec"] = str(api_resource.spec)
+            elif hasattr(agent, "spec") and agent.spec:
                 agent_dict["spec"] = str(agent.spec)
             console.print(json.dumps(agent_dict, indent=2, default=str))
         else:
-            name = agent.resource_name.split("/")[-1] if agent.resource_name else ""
+            name = agent_resource_name.split("/")[-1] if agent_resource_name else ""
             display_name = getattr(agent, "display_name", "") or "N/A"
             description = getattr(agent, "description", "") or "N/A"
             create_time = str(getattr(agent, "create_time", "")) or "N/A"
             update_time = str(getattr(agent, "update_time", "")) or "N/A"
 
             effective_identity = "N/A"
-            if hasattr(agent, "spec") and agent.spec and hasattr(agent.spec, "effective_identity"):
+            # Try to read from api_resource.spec.effective_identity first
+            api_resource = getattr(agent, "api_resource", None)
+            if api_resource and hasattr(api_resource, "spec") and api_resource.spec:
+                effective_identity = getattr(api_resource.spec, "effective_identity", "N/A")
+            elif hasattr(agent, "spec") and agent.spec and hasattr(agent.spec, "effective_identity"):
                 effective_identity = agent.spec.effective_identity
 
             content = (

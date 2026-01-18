@@ -16,6 +16,12 @@ def test_get_agent_shows_effective_identity(mock_client_class):
     mock_agent.description = "A test agent"
     mock_agent.create_time = "2024-01-01T00:00:00Z"
     mock_agent.update_time = "2024-01-02T00:00:00Z"
+    
+    # Mock api_resource structure
+    mock_api_resource = MagicMock()
+    mock_api_resource.spec = mock_spec
+    mock_agent.api_resource = mock_api_resource
+    
     mock_agent.spec = mock_spec
 
     mock_client = MagicMock()

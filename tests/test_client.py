@@ -79,24 +79,24 @@ class TestAgentEngineClient:
     def test_get_agent_with_id(self, mock_vertexai, mock_agent_engines, mock_types):
         """Test getting agent by short ID."""
         mock_agent = MagicMock()
-        mock_agent_engines.get.return_value = mock_agent
+        mock_vertexai.Client.return_value.agent_engines.get.return_value = mock_agent
 
         client = AgentEngineClient(project="test-project", location="us-central1")
         agent = client.get_agent("agent123")
 
         expected_name = "projects/test-project/locations/us-central1/reasoningEngines/agent123"
-        mock_agent_engines.get.assert_called_with(expected_name)
+        mock_vertexai.Client.return_value.agent_engines.get.assert_called_with(name=expected_name)
 
     def test_get_agent_with_full_name(self, mock_vertexai, mock_agent_engines, mock_types):
         """Test getting agent by full resource name."""
         mock_agent = MagicMock()
-        mock_agent_engines.get.return_value = mock_agent
+        mock_vertexai.Client.return_value.agent_engines.get.return_value = mock_agent
 
         full_name = "projects/other-project/locations/europe-west1/reasoningEngines/agent456"
         client = AgentEngineClient(project="test-project", location="us-central1")
         agent = client.get_agent(full_name)
 
-        mock_agent_engines.get.assert_called_with(full_name)
+        mock_vertexai.Client.return_value.agent_engines.get.assert_called_with(name=full_name)
 
     def test_create_agent_service_account_identity(self, mock_vertexai, mock_agent_engines, mock_types):
         """Test creating agent with service_account identity."""

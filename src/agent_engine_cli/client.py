@@ -71,7 +71,8 @@ class AgentEngineClient:
         else:
             resource_name = agent_id
 
-        return agent_engines.get(resource_name)
+        agent = self._client.agent_engines.get(name=resource_name)
+        return getattr(agent, "api_resource", agent)
 
     def create_agent(
         self,

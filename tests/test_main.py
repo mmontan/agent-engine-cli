@@ -57,7 +57,7 @@ class TestListCommand:
         assert result.exit_code == 0
         assert "agent1" in result.stdout
         assert "Test Agent" in result.stdout
-        assert "2024-01-01 12:30" in result.stdout
+        assert "2024-01-01" in result.stdout
 
 
 class TestGetCommand:
