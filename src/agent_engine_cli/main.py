@@ -1,3 +1,4 @@
+import asyncio
 import json
 from typing import Annotated, Literal
 
@@ -7,6 +8,7 @@ from rich.markup import escape
 from rich.panel import Panel
 from rich.table import Table
 
+from agent_engine_cli.chat import run_chat
 from agent_engine_cli.client import AgentEngineClient
 
 console = Console()
@@ -196,6 +198,30 @@ def delete_agent(
         console.print(f"[red]Agent '{escape(agent_id)}' deleted.[/red]")
     except Exception as e:
         console.print(f"[red]Error deleting agent: {e}[/red]")
+        raise typer.Exit(code=1)
+
+
+@app.command("chat", rich_help_panel="Interactive")
+def chat(
+    agent_id: Annotated[str, typer.Argument(help="Agent ID or full resource name")],
+    project: Annotated[str, typer.Option("--project", "-p", help="Google Cloud project ID")],
+    location: Annotated[str, typer.Option("--location", "-l", help="Google Cloud region")],
+    user: Annotated[str, typer.Option("--user", "-u", help="User ID for the chat session")] = "cli-user",
+    debug: Annotated[bool, typer.Option("--debug", "-d", help="Enable verbose HTTP debug logging")] = False,
+) -> None:
+    """Start an interactive chat session with an agent."""
+    try:
+        asyncio.run(run_chat(
+            project=project,
+            location=location,
+            agent_id=agent_id,
+            user_id=user,
+            debug=debug,
+        ))
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Chat session ended.[/yellow]")
+    except Exception as e:
+        console.print(f"[red]Error in chat session: {e}[/red]")
         raise typer.Exit(code=1)
 
 

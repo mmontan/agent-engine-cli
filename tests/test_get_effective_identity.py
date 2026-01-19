@@ -11,6 +11,7 @@ def test_get_agent_shows_effective_identity(mock_client_class):
     mock_spec.effective_identity = "service-account@test.iam.gserviceaccount.com"
 
     mock_agent = MagicMock()
+    mock_agent.name = None  # Explicitly set to None so it falls through to resource_name
     mock_agent.resource_name = "projects/test/locations/us-central1/reasoningEngines/agent1"
     mock_agent.display_name = "Test Agent"
     mock_agent.description = "A test agent"

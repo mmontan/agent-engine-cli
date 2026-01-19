@@ -27,8 +27,8 @@ dependencies = [
 ae = "agent_engine_cli.main:app"
 
 [project.urls]
-"Homepage" = "https://github.com/yourusername/agent-engine-cli"
-"Bug Tracker" = "https://github.com/yourusername/agent-engine-cli/issues"
+"Homepage" = "https://github.com/mmontan/agent-engine-cli"
+"Bug Tracker" = "https://github.com/mmontan/agent-engine-cli/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/agent_engine_cli"]

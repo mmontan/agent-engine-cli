@@ -41,6 +41,21 @@ uv run python -m agent_engine_cli.main list -p PROJECT_ID -l us-central1
 uv run python -m agent_engine_cli.main get AGENT_ID -p PROJECT_ID -l us-central1
 ```
 
+## Chat with an Agent
+
+Start an interactive chat session with a deployed agent:
+
+```bash
+# Basic usage
+ae chat AGENT_ID -p PROJECT_ID -l us-central1
+
+# With custom user ID
+ae chat AGENT_ID -p PROJECT_ID -l us-central1 --user my-user-id
+
+# With debug logging enabled
+ae chat AGENT_ID -p PROJECT_ID -l us-central1 --debug
+```
+
 ## Development
 
 To run tests:

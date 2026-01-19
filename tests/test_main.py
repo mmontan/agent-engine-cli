@@ -1,7 +1,7 @@
 """Tests for CLI commands."""
 
 from datetime import datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from typer.testing import CliRunner
 
@@ -73,11 +73,14 @@ class TestGetCommand:
     def test_get_agent(self, mock_client_class):
         """Test get command."""
         mock_agent = MagicMock()
+        mock_agent.name = None  # Explicitly set to None so it falls through to resource_name
         mock_agent.resource_name = "projects/test/locations/us-central1/reasoningEngines/agent1"
         mock_agent.display_name = "Test Agent"
         mock_agent.description = "A test agent"
         mock_agent.create_time = "2024-01-01T00:00:00Z"
         mock_agent.update_time = "2024-01-02T00:00:00Z"
+        mock_agent.api_resource = None  # Explicitly set to avoid MagicMock chain
+        mock_agent.spec = None  # Explicitly set to avoid MagicMock chain
 
         mock_client = MagicMock()
         mock_client.get_agent.return_value = mock_agent
@@ -268,3 +271,63 @@ class TestDeleteCommand:
         )
         assert result.exit_code == 1
         assert "Error deleting agent" in result.stdout
+
+
+class TestChatCommand:
+    def test_chat_help(self):
+        """Test chat command help."""
+        result = runner.invoke(app, ["chat", "--help"])
+        assert result.exit_code == 0
+        assert "--project" in result.stdout
+        assert "--location" in result.stdout
+        assert "--user" in result.stdout
+        assert "--debug" in result.stdout
+
+    @patch("agent_engine_cli.main.run_chat")
+    def test_chat_invokes_run_chat(self, mock_run_chat):
+        """Test chat command invokes run_chat with correct arguments."""
+        mock_run_chat.return_value = AsyncMock()()
+
+        result = runner.invoke(
+            app,
+            ["chat", "agent123", "--project", "test-project", "--location", "us-central1"],
+        )
+        assert result.exit_code == 0
+        mock_run_chat.assert_called_once_with(
+            project="test-project",
+            location="us-central1",
+            agent_id="agent123",
+            user_id="cli-user",
+            debug=False,
+        )
+
+    @patch("agent_engine_cli.main.run_chat")
+    def test_chat_with_user_and_debug(self, mock_run_chat):
+        """Test chat command with custom user and debug flag."""
+        mock_run_chat.return_value = AsyncMock()()
+
+        result = runner.invoke(
+            app,
+            ["chat", "agent123", "--project", "test-project", "--location", "us-central1",
+             "--user", "my-user", "--debug"],
+        )
+        assert result.exit_code == 0
+        mock_run_chat.assert_called_once_with(
+            project="test-project",
+            location="us-central1",
+            agent_id="agent123",
+            user_id="my-user",
+            debug=True,
+        )
+
+    @patch("agent_engine_cli.main.run_chat")
+    def test_chat_error_handling(self, mock_run_chat):
+        """Test chat command handles errors gracefully."""
+        mock_run_chat.side_effect = Exception("Connection failed")
+
+        result = runner.invoke(
+            app,
+            ["chat", "agent123", "--project", "test-project", "--location", "us-central1"],
+        )
+        assert result.exit_code == 1
+        assert "Error in chat session" in result.stdout
