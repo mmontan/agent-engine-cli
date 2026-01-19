@@ -8,6 +8,7 @@ from rich.markup import escape
 from rich.panel import Panel
 from rich.table import Table
 
+from agent_engine_cli import __version__
 from agent_engine_cli.chat import run_chat
 from agent_engine_cli.client import AgentEngineClient
 
@@ -23,7 +24,7 @@ app = typer.Typer(
 @app.command(rich_help_panel="Utility")
 def version():
     """Show the CLI version."""
-    print("Agent Engine CLI v0.1.0")
+    print(f"Agent Engine CLI v{__version__}")
 
 
 @app.command("list")
