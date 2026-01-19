@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from typer.testing import CliRunner
 
+from agent_engine_cli.config import ConfigurationError
 from agent_engine_cli.main import app
 
 runner = CliRunner()
@@ -331,3 +332,111 @@ class TestChatCommand:
         )
         assert result.exit_code == 1
         assert "Error in chat session" in result.stdout
+
+
+class TestADCFallback:
+    """Tests for ADC (Application Default Credentials) project fallback."""
+
+    @patch("agent_engine_cli.main.AgentEngineClient")
+    @patch("agent_engine_cli.main.resolve_project")
+    def test_list_uses_adc_project(self, mock_resolve, mock_client_class):
+        """Test list command uses ADC project when --project not provided."""
+        mock_resolve.return_value = "adc-project"
+        mock_client = MagicMock()
+        mock_client.list_agents.return_value = []
+        mock_client_class.return_value = mock_client
+
+        result = runner.invoke(app, ["list", "--location", "us-central1"])
+        assert result.exit_code == 0
+        mock_resolve.assert_called_once_with(None)
+        mock_client_class.assert_called_once_with(project="adc-project", location="us-central1")
+
+    @patch("agent_engine_cli.main.resolve_project")
+    def test_list_error_when_no_project(self, mock_resolve):
+        """Test list command shows error when no project available."""
+        mock_resolve.side_effect = ConfigurationError("No project specified")
+
+        result = runner.invoke(app, ["list", "--location", "us-central1"])
+        assert result.exit_code == 1
+        assert "Error: No project specified" in result.stdout
+
+    @patch("agent_engine_cli.main.AgentEngineClient")
+    @patch("agent_engine_cli.main.resolve_project")
+    def test_get_uses_adc_project(self, mock_resolve, mock_client_class):
+        """Test get command uses ADC project when --project not provided."""
+        mock_resolve.return_value = "adc-project"
+        mock_agent = MagicMock()
+        mock_agent.name = "projects/adc-project/locations/us-central1/reasoningEngines/agent1"
+        mock_agent.display_name = "Test"
+        mock_agent.description = "Test"
+        mock_agent.create_time = "2024-01-01"
+        mock_agent.update_time = "2024-01-01"
+        mock_agent.api_resource = None
+        mock_agent.spec = None
+
+        mock_client = MagicMock()
+        mock_client.get_agent.return_value = mock_agent
+        mock_client_class.return_value = mock_client
+
+        result = runner.invoke(app, ["get", "agent1", "--location", "us-central1"])
+        assert result.exit_code == 0
+        mock_resolve.assert_called_once_with(None)
+
+    @patch("agent_engine_cli.main.AgentEngineClient")
+    @patch("agent_engine_cli.main.resolve_project")
+    def test_create_uses_adc_project(self, mock_resolve, mock_client_class):
+        """Test create command uses ADC project when --project not provided."""
+        mock_resolve.return_value = "adc-project"
+        mock_agent = MagicMock()
+        mock_agent.name = "projects/adc-project/locations/us-central1/reasoningEngines/new-agent"
+
+        mock_client = MagicMock()
+        mock_client.create_agent.return_value = mock_agent
+        mock_client_class.return_value = mock_client
+
+        result = runner.invoke(app, ["create", "Test Agent", "--location", "us-central1"])
+        assert result.exit_code == 0
+        mock_resolve.assert_called_once_with(None)
+
+    @patch("agent_engine_cli.main.AgentEngineClient")
+    @patch("agent_engine_cli.main.resolve_project")
+    def test_delete_uses_adc_project(self, mock_resolve, mock_client_class):
+        """Test delete command uses ADC project when --project not provided."""
+        mock_resolve.return_value = "adc-project"
+        mock_client = MagicMock()
+        mock_client_class.return_value = mock_client
+
+        result = runner.invoke(app, ["delete", "agent1", "--location", "us-central1", "--yes"])
+        assert result.exit_code == 0
+        mock_resolve.assert_called_once_with(None)
+
+    @patch("agent_engine_cli.main.run_chat")
+    @patch("agent_engine_cli.main.resolve_project")
+    def test_chat_uses_adc_project(self, mock_resolve, mock_run_chat):
+        """Test chat command uses ADC project when --project not provided."""
+        mock_resolve.return_value = "adc-project"
+        mock_run_chat.return_value = AsyncMock()()
+
+        result = runner.invoke(app, ["chat", "agent1", "--location", "us-central1"])
+        assert result.exit_code == 0
+        mock_resolve.assert_called_once_with(None)
+        mock_run_chat.assert_called_once_with(
+            project="adc-project",
+            location="us-central1",
+            agent_id="agent1",
+            user_id="cli-user",
+            debug=False,
+        )
+
+    @patch("agent_engine_cli.main.AgentEngineClient")
+    @patch("agent_engine_cli.main.resolve_project")
+    def test_explicit_project_still_works(self, mock_resolve, mock_client_class):
+        """Test that explicit --project still works and is passed to resolve_project."""
+        mock_resolve.return_value = "explicit-project"
+        mock_client = MagicMock()
+        mock_client.list_agents.return_value = []
+        mock_client_class.return_value = mock_client
+
+        result = runner.invoke(app, ["list", "--project", "explicit-project", "--location", "us-central1"])
+        assert result.exit_code == 0
+        mock_resolve.assert_called_once_with("explicit-project")

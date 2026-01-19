@@ -11,6 +11,7 @@ from rich.table import Table
 from agent_engine_cli import __version__
 from agent_engine_cli.chat import run_chat
 from agent_engine_cli.client import AgentEngineClient
+from agent_engine_cli.config import ConfigurationError, resolve_project
 
 console = Console()
 
@@ -29,10 +30,16 @@ def version():
 
 @app.command("list")
 def list_agents(
-    project: Annotated[str, typer.Option("--project", "-p", help="Google Cloud project ID")],
     location: Annotated[str, typer.Option("--location", "-l", help="Google Cloud region")],
+    project: Annotated[str | None, typer.Option("--project", "-p", help="Google Cloud project ID (defaults to ADC project)")] = None,
 ) -> None:
     """List all agents in the project."""
+    try:
+        project = resolve_project(project)
+    except ConfigurationError as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(code=1)
+
     try:
         client = AgentEngineClient(project=project, location=location)
         agents = client.list_agents()
@@ -88,11 +95,17 @@ def list_agents(
 @app.command("get")
 def get_agent(
     agent_id: Annotated[str, typer.Argument(help="Agent ID or full resource name")],
-    project: Annotated[str, typer.Option("--project", "-p", help="Google Cloud project ID")],
     location: Annotated[str, typer.Option("--location", "-l", help="Google Cloud region")],
+    project: Annotated[str | None, typer.Option("--project", "-p", help="Google Cloud project ID (defaults to ADC project)")] = None,
     full: Annotated[bool, typer.Option("--full", "-f", help="Show full JSON output")] = False,
 ) -> None:
     """Get details for a specific agent."""
+    try:
+        project = resolve_project(project)
+    except ConfigurationError as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(code=1)
+
     try:
         client = AgentEngineClient(project=project, location=location)
         agent = client.get_agent(agent_id)
@@ -146,8 +159,8 @@ def get_agent(
 @app.command("create")
 def create_agent(
     display_name: Annotated[str, typer.Argument(help="Display name for the agent")],
-    project: Annotated[str, typer.Option("--project", "-p", help="Google Cloud project ID")],
     location: Annotated[str, typer.Option("--location", "-l", help="Google Cloud region")],
+    project: Annotated[str | None, typer.Option("--project", "-p", help="Google Cloud project ID (defaults to ADC project)")] = None,
     identity: Annotated[
         Literal["agent_identity", "service_account"],
         typer.Option("--identity", "-i", help="Identity type for the agent"),
@@ -158,6 +171,12 @@ def create_agent(
     ] = None,
 ) -> None:
     """Create a new agent (without deploying code)."""
+    try:
+        project = resolve_project(project)
+    except ConfigurationError as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(code=1)
+
     try:
         client = AgentEngineClient(project=project, location=location)
         console.print(f"Creating agent '{escape(display_name)}'...")
@@ -181,12 +200,18 @@ def create_agent(
 @app.command("delete")
 def delete_agent(
     agent_id: Annotated[str, typer.Argument(help="Agent ID or full resource name")],
-    project: Annotated[str, typer.Option("--project", "-p", help="Google Cloud project ID")],
     location: Annotated[str, typer.Option("--location", "-l", help="Google Cloud region")],
+    project: Annotated[str | None, typer.Option("--project", "-p", help="Google Cloud project ID (defaults to ADC project)")] = None,
     force: Annotated[bool, typer.Option("--force", "-f", help="Force deletion of agents with sessions/memory")] = False,
     yes: Annotated[bool, typer.Option("--yes", "-y", help="Skip confirmation prompt")] = False,
 ) -> None:
     """Delete an agent."""
+    try:
+        project = resolve_project(project)
+    except ConfigurationError as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(code=1)
+
     if not yes:
         confirm = typer.confirm(f"Are you sure you want to delete agent '{agent_id}'?")
         if not confirm:
@@ -205,12 +230,18 @@ def delete_agent(
 @app.command("chat", rich_help_panel="Interactive")
 def chat(
     agent_id: Annotated[str, typer.Argument(help="Agent ID or full resource name")],
-    project: Annotated[str, typer.Option("--project", "-p", help="Google Cloud project ID")],
     location: Annotated[str, typer.Option("--location", "-l", help="Google Cloud region")],
+    project: Annotated[str | None, typer.Option("--project", "-p", help="Google Cloud project ID (defaults to ADC project)")] = None,
     user: Annotated[str, typer.Option("--user", "-u", help="User ID for the chat session")] = "cli-user",
     debug: Annotated[bool, typer.Option("--debug", "-d", help="Enable verbose HTTP debug logging")] = False,
 ) -> None:
     """Start an interactive chat session with an agent."""
+    try:
+        project = resolve_project(project)
+    except ConfigurationError as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(code=1)
+
     try:
         asyncio.run(run_chat(
             project=project,
