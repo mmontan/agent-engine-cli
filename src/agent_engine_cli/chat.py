@@ -11,6 +11,29 @@ from rich.console import Console
 console = Console()
 
 
+def _format_tool_args(args: dict | None) -> str:
+    """Format tool arguments as a compact string for display."""
+    if not args:
+        return ""
+    import json
+
+    formatted = []
+    for key, value in args.items():
+        if isinstance(value, str):
+            value_str = value
+            if len(value_str) > 50:
+                value_str = value_str[:47] + "..."
+            formatted.append(f'{key}="{value_str}"')
+        elif isinstance(value, (dict, list)):
+            value_str = json.dumps(value)
+            if len(value_str) > 50:
+                value_str = value_str[:47] + "..."
+            formatted.append(f"{key}={value_str}")
+        else:
+            formatted.append(f"{key}={value}")
+    return ", ".join(formatted)
+
+
 def _setup_debug_logging() -> None:
     """Enable verbose HTTP debugging with request/response bodies."""
     os.environ["HTTPX_LOG_LEVEL"] = "trace"
@@ -161,16 +184,24 @@ async def run_chat(
                     parts = event.content.parts
 
             for part in parts:
-                # Extract Tool Usage
+                # Extract and display Tool Usage in real-time
                 tool_name = None
+                tool_args = None
                 if isinstance(part, dict):
                     if "function_call" in part:
-                        tool_name = part["function_call"].get("name")
+                        fc = part["function_call"]
+                        tool_name = fc.get("name")
+                        tool_args = fc.get("args")
                 elif hasattr(part, "function_call") and part.function_call:
-                    tool_name = part.function_call.name
+                    fc = part.function_call
+                    tool_name = fc.name
+                    tool_args = fc.args
 
                 if tool_name and tool_name not in tools_used:
                     tools_used.append(tool_name)
+                    # Print tool call immediately
+                    args_str = _format_tool_args(tool_args)
+                    console.print(f"[dim]\\[{tool_name}({args_str})][/dim]")
 
                 # Extract Text
                 text = None
@@ -185,7 +216,7 @@ async def run_chat(
         # Print extracted information on new lines
         if tools_used:
             console.print(
-                f"\n[dim]Tools: {' '.join([f'[{t}]' for t in tools_used])}[/dim]"
+                f"[dim]({len(tools_used)} tool{'s' if len(tools_used) != 1 else ''} used)[/dim]"
             )
 
         if full_response_text:
