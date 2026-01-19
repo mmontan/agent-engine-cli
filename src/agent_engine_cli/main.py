@@ -3,6 +3,7 @@ from typing import Annotated, Literal
 
 import typer
 from rich.console import Console
+from rich.markup import escape
 from rich.panel import Panel
 from rich.table import Table
 
@@ -67,7 +68,13 @@ def list_agents(
             if hasattr(agent, "spec") and agent.spec:
                 effective_identity = getattr(agent.spec, "effective_identity", "N/A")
 
-            table.add_row(name, display_name, create_time, update_time, effective_identity)
+            table.add_row(
+                escape(name),
+                escape(display_name),
+                create_time,
+                update_time,
+                escape(effective_identity),
+            )
 
         console.print(table)
     except Exception as e:
@@ -120,12 +127,12 @@ def get_agent(
                 effective_identity = agent.spec.effective_identity
 
             content = (
-                f"[bold]Name:[/bold] {name}\n"
-                f"[bold]Display Name:[/bold] {display_name}\n"
-                f"[bold]Description:[/bold] {description}\n"
+                f"[bold]Name:[/bold] {escape(name)}\n"
+                f"[bold]Display Name:[/bold] {escape(display_name)}\n"
+                f"[bold]Description:[/bold] {escape(description)}\n"
                 f"[bold]Created:[/bold] {create_time}\n"
                 f"[bold]Updated:[/bold] {update_time}\n"
-                f"[bold]Effective Identity:[/bold] {effective_identity}"
+                f"[bold]Effective Identity:[/bold] {escape(effective_identity)}"
             )
             console.print(Panel(content, title="Agent Details"))
     except Exception as e:
@@ -150,7 +157,7 @@ def create_agent(
     """Create a new agent (without deploying code)."""
     try:
         client = AgentEngineClient(project=project, location=location)
-        console.print(f"Creating agent '{display_name}'...")
+        console.print(f"Creating agent '{escape(display_name)}'...")
 
         agent = client.create_agent(
             display_name=display_name,
@@ -186,7 +193,7 @@ def delete_agent(
     try:
         client = AgentEngineClient(project=project, location=location)
         client.delete_agent(agent_id, force=force)
-        console.print(f"[red]Agent '{agent_id}' deleted.[/red]")
+        console.print(f"[red]Agent '{escape(agent_id)}' deleted.[/red]")
     except Exception as e:
         console.print(f"[red]Error deleting agent: {e}[/red]")
         raise typer.Exit(code=1)
