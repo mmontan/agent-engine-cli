@@ -120,3 +120,60 @@ class AgentEngineClient:
             resource_name = agent_id
 
         agent_engines.delete(resource_name, force=force)
+
+    def list_sessions(self, agent_id: str) -> list:
+        """List all sessions for an agent.
+
+        Args:
+            agent_id: The agent resource ID or full resource name
+
+        Returns:
+            List of session objects
+        """
+        if "/" not in agent_id:
+            resource_name = (
+                f"projects/{self.project}/locations/{self.location}/"
+                f"reasoningEngines/{agent_id}"
+            )
+        else:
+            resource_name = agent_id
+
+        return list(self._client.agent_engines.list_sessions(name=resource_name))
+
+    def list_sandboxes(self, agent_id: str) -> list:
+        """List all sandboxes for an agent.
+
+        Args:
+            agent_id: The agent resource ID or full resource name
+
+        Returns:
+            List of sandbox objects
+        """
+        if "/" not in agent_id:
+            resource_name = (
+                f"projects/{self.project}/locations/{self.location}/"
+                f"reasoningEngines/{agent_id}"
+            )
+        else:
+            resource_name = agent_id
+
+        return list(self._client.agent_engines.sandboxes.list(name=resource_name))
+
+    def list_memories(self, agent_id: str) -> list:
+        """List all memories for an agent.
+
+        Args:
+            agent_id: The agent resource ID or full resource name
+
+        Returns:
+            List of memory objects
+        """
+        if "/" not in agent_id:
+            resource_name = (
+                f"projects/{self.project}/locations/{self.location}/"
+                f"reasoningEngines/{agent_id}"
+            )
+        else:
+            resource_name = agent_id
+
+        return list(self._client.agent_engines.memories.list(name=resource_name))

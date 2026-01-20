@@ -440,3 +440,226 @@ class TestADCFallback:
         result = runner.invoke(app, ["list", "--project", "explicit-project", "--location", "us-central1"])
         assert result.exit_code == 0
         mock_resolve.assert_called_once_with("explicit-project")
+
+
+class TestSessionsListCommand:
+    def test_sessions_list_help(self):
+        """Test sessions list command help."""
+        result = runner.invoke(app, ["sessions", "list", "--help"])
+        assert result.exit_code == 0
+        assert "--project" in result.stdout
+        assert "--location" in result.stdout
+        assert "AGENT_ID" in result.stdout
+
+    @patch("agent_engine_cli.main.AgentEngineClient")
+    def test_sessions_list_no_sessions(self, mock_client_class):
+        """Test sessions list with no sessions."""
+        mock_client = MagicMock()
+        mock_client.list_sessions.return_value = []
+        mock_client_class.return_value = mock_client
+
+        result = runner.invoke(
+            app, ["sessions", "list", "agent123", "--project", "test-project", "--location", "us-central1"]
+        )
+        assert result.exit_code == 0
+        assert "No sessions found" in result.stdout
+
+    @patch("agent_engine_cli.main.AgentEngineClient")
+    def test_sessions_list_with_sessions(self, mock_client_class):
+        """Test sessions list with sessions."""
+        mock_session = MagicMock()
+        mock_session.name = "projects/test/locations/us-central1/reasoningEngines/agent1/sessions/session123"
+        mock_session.display_name = "my_session"
+        mock_session.user_id = "user-456"
+        mock_session.create_time = datetime(2024, 1, 15, 10, 30, 0)
+        mock_session.expire_time = datetime(2024, 1, 16, 10, 30, 0)
+
+        mock_client = MagicMock()
+        mock_client.list_sessions.return_value = [mock_session]
+        mock_client_class.return_value = mock_client
+
+        result = runner.invoke(
+            app, ["sessions", "list", "agent1", "--project", "test-project", "--location", "us-central1"]
+        )
+        assert result.exit_code == 0
+        assert "session123" in result.stdout
+        assert "my_session" in result.stdout
+        assert "user-456" in result.stdout
+        assert "2024-01-15" in result.stdout
+
+    @patch("agent_engine_cli.main.AgentEngineClient")
+    def test_sessions_list_error(self, mock_client_class):
+        """Test sessions list when an error occurs."""
+        mock_client = MagicMock()
+        mock_client.list_sessions.side_effect = Exception("Agent not found")
+        mock_client_class.return_value = mock_client
+
+        result = runner.invoke(
+            app, ["sessions", "list", "agent123", "--project", "test-project", "--location", "us-central1"]
+        )
+        assert result.exit_code == 1
+        assert "Error listing sessions" in result.stdout
+
+    @patch("agent_engine_cli.main.AgentEngineClient")
+    @patch("agent_engine_cli.main.resolve_project")
+    def test_sessions_list_uses_adc_project(self, mock_resolve, mock_client_class):
+        """Test sessions list uses ADC project when --project not provided."""
+        mock_resolve.return_value = "adc-project"
+        mock_client = MagicMock()
+        mock_client.list_sessions.return_value = []
+        mock_client_class.return_value = mock_client
+
+        result = runner.invoke(app, ["sessions", "list", "agent1", "--location", "us-central1"])
+        assert result.exit_code == 0
+        mock_resolve.assert_called_once_with(None)
+        mock_client_class.assert_called_once_with(project="adc-project", location="us-central1")
+
+
+class TestSandboxesListCommand:
+    def test_sandboxes_list_help(self):
+        """Test sandboxes list command help."""
+        result = runner.invoke(app, ["sandboxes", "list", "--help"])
+        assert result.exit_code == 0
+        assert "--project" in result.stdout
+        assert "--location" in result.stdout
+        assert "AGENT_ID" in result.stdout
+
+    @patch("agent_engine_cli.main.AgentEngineClient")
+    def test_sandboxes_list_no_sandboxes(self, mock_client_class):
+        """Test sandboxes list with no sandboxes."""
+        mock_client = MagicMock()
+        mock_client.list_sandboxes.return_value = []
+        mock_client_class.return_value = mock_client
+
+        result = runner.invoke(
+            app, ["sandboxes", "list", "agent123", "--project", "test-project", "--location", "us-central1"]
+        )
+        assert result.exit_code == 0
+        assert "No sandboxes found" in result.stdout
+
+    @patch("agent_engine_cli.main.AgentEngineClient")
+    def test_sandboxes_list_with_sandboxes(self, mock_client_class):
+        """Test sandboxes list with sandboxes."""
+        mock_state = MagicMock()
+        mock_state.value = "STATE_RUNNING"
+
+        mock_sandbox = MagicMock()
+        mock_sandbox.name = "projects/test/locations/us-central1/reasoningEngines/agent1/sandboxes/sandbox123"
+        mock_sandbox.display_name = "my_sandbox"
+        mock_sandbox.state = mock_state
+        mock_sandbox.create_time = datetime(2024, 2, 20, 14, 30, 0)
+        mock_sandbox.expire_time = datetime(2024, 2, 21, 14, 30, 0)
+
+        mock_client = MagicMock()
+        mock_client.list_sandboxes.return_value = [mock_sandbox]
+        mock_client_class.return_value = mock_client
+
+        result = runner.invoke(
+            app, ["sandboxes", "list", "agent1", "--project", "test-project", "--location", "us-central1"]
+        )
+        assert result.exit_code == 0
+        assert "sandbox123" in result.stdout
+        assert "my_sandbox" in result.stdout
+        assert "RUNNING" in result.stdout
+        assert "2024-02-20" in result.stdout
+
+    @patch("agent_engine_cli.main.AgentEngineClient")
+    def test_sandboxes_list_error(self, mock_client_class):
+        """Test sandboxes list when an error occurs."""
+        mock_client = MagicMock()
+        mock_client.list_sandboxes.side_effect = Exception("Agent not found")
+        mock_client_class.return_value = mock_client
+
+        result = runner.invoke(
+            app, ["sandboxes", "list", "agent123", "--project", "test-project", "--location", "us-central1"]
+        )
+        assert result.exit_code == 1
+        assert "Error listing sandboxes" in result.stdout
+
+    @patch("agent_engine_cli.main.AgentEngineClient")
+    @patch("agent_engine_cli.main.resolve_project")
+    def test_sandboxes_list_uses_adc_project(self, mock_resolve, mock_client_class):
+        """Test sandboxes list uses ADC project when --project not provided."""
+        mock_resolve.return_value = "adc-project"
+        mock_client = MagicMock()
+        mock_client.list_sandboxes.return_value = []
+        mock_client_class.return_value = mock_client
+
+        result = runner.invoke(app, ["sandboxes", "list", "agent1", "--location", "us-central1"])
+        assert result.exit_code == 0
+        mock_resolve.assert_called_once_with(None)
+        mock_client_class.assert_called_once_with(project="adc-project", location="us-central1")
+
+
+class TestMemoriesListCommand:
+    def test_memories_list_help(self):
+        """Test memories list command help."""
+        result = runner.invoke(app, ["memories", "list", "--help"])
+        assert result.exit_code == 0
+        assert "--project" in result.stdout
+        assert "--location" in result.stdout
+        assert "AGENT_ID" in result.stdout
+
+    @patch("agent_engine_cli.main.AgentEngineClient")
+    def test_memories_list_no_memories(self, mock_client_class):
+        """Test memories list with no memories."""
+        mock_client = MagicMock()
+        mock_client.list_memories.return_value = []
+        mock_client_class.return_value = mock_client
+
+        result = runner.invoke(
+            app, ["memories", "list", "agent123", "--project", "test-project", "--location", "us-central1"]
+        )
+        assert result.exit_code == 0
+        assert "No memories found" in result.stdout
+
+    @patch("agent_engine_cli.main.AgentEngineClient")
+    def test_memories_list_with_memories(self, mock_client_class):
+        """Test memories list with memories."""
+        mock_memory = MagicMock()
+        mock_memory.name = "projects/test/locations/us-central1/reasoningEngines/agent1/memories/memory123"
+        mock_memory.display_name = "user_preference"
+        mock_memory.scope = {"user_id": "user-123"}
+        mock_memory.fact = "User prefers dark mode"
+        mock_memory.create_time = datetime(2024, 3, 10, 9, 15, 0)
+        mock_memory.expire_time = datetime(2024, 4, 10, 9, 15, 0)
+
+        mock_client = MagicMock()
+        mock_client.list_memories.return_value = [mock_memory]
+        mock_client_class.return_value = mock_client
+
+        result = runner.invoke(
+            app, ["memories", "list", "agent1", "--project", "test-project", "--location", "us-central1"]
+        )
+        assert result.exit_code == 0
+        assert "memory123" in result.stdout
+        assert "user_id=" in result.stdout  # Scope key (value may be truncated)
+        assert "dark mode" in result.stdout
+        assert "2024-03-10" in result.stdout
+
+    @patch("agent_engine_cli.main.AgentEngineClient")
+    def test_memories_list_error(self, mock_client_class):
+        """Test memories list when an error occurs."""
+        mock_client = MagicMock()
+        mock_client.list_memories.side_effect = Exception("Agent not found")
+        mock_client_class.return_value = mock_client
+
+        result = runner.invoke(
+            app, ["memories", "list", "agent123", "--project", "test-project", "--location", "us-central1"]
+        )
+        assert result.exit_code == 1
+        assert "Error listing memories" in result.stdout
+
+    @patch("agent_engine_cli.main.AgentEngineClient")
+    @patch("agent_engine_cli.main.resolve_project")
+    def test_memories_list_uses_adc_project(self, mock_resolve, mock_client_class):
+        """Test memories list uses ADC project when --project not provided."""
+        mock_resolve.return_value = "adc-project"
+        mock_client = MagicMock()
+        mock_client.list_memories.return_value = []
+        mock_client_class.return_value = mock_client
+
+        result = runner.invoke(app, ["memories", "list", "agent1", "--location", "us-central1"])
+        assert result.exit_code == 0
+        mock_resolve.assert_called_once_with(None)
+        mock_client_class.assert_called_once_with(project="adc-project", location="us-central1")

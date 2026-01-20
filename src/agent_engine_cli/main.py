@@ -227,6 +227,225 @@ def delete_agent(
         raise typer.Exit(code=1)
 
 
+# Create sessions subcommand group
+sessions_app = typer.Typer(help="Manage agent sessions.")
+app.add_typer(sessions_app, name="sessions")
+
+
+@sessions_app.command("list")
+def list_sessions(
+    agent_id: Annotated[str, typer.Argument(help="Agent ID or full resource name")],
+    location: Annotated[str, typer.Option("--location", "-l", help="Google Cloud region")],
+    project: Annotated[str | None, typer.Option("--project", "-p", help="Google Cloud project ID (defaults to ADC project)")] = None,
+) -> None:
+    """List all sessions for an agent."""
+    try:
+        project = resolve_project(project)
+    except ConfigurationError as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(code=1)
+
+    try:
+        client = AgentEngineClient(project=project, location=location)
+        sessions = client.list_sessions(agent_id)
+
+        if not sessions:
+            console.print("No sessions found.")
+            return
+
+        table = Table(title="Sessions")
+        table.add_column("Session ID", style="cyan")
+        table.add_column("Display Name", style="green")
+        table.add_column("User ID")
+        table.add_column("Created")
+        table.add_column("Expires")
+
+        for session in sessions:
+            # Extract session ID from full resource name
+            session_name = getattr(session, "name", "") or ""
+            session_id = session_name.split("/")[-1] if session_name else ""
+
+            display_name = getattr(session, "display_name", "") or ""
+            user_id = getattr(session, "user_id", "") or ""
+
+            # Format timestamps compactly (YYYY-MM-DD HH:MM)
+            create_time_raw = getattr(session, "create_time", None)
+            if create_time_raw:
+                create_time = create_time_raw.strftime("%Y-%m-%d %H:%M")
+            else:
+                create_time = ""
+
+            expire_time_raw = getattr(session, "expire_time", None)
+            if expire_time_raw:
+                expire_time = expire_time_raw.strftime("%Y-%m-%d %H:%M")
+            else:
+                expire_time = ""
+
+            table.add_row(
+                escape(session_id),
+                escape(display_name),
+                escape(user_id),
+                create_time,
+                expire_time,
+            )
+
+        console.print(table)
+    except Exception as e:
+        console.print(f"[red]Error listing sessions: {e}[/red]")
+        raise typer.Exit(code=1)
+
+
+# Create sandboxes subcommand group
+sandboxes_app = typer.Typer(help="Manage agent sandboxes.")
+app.add_typer(sandboxes_app, name="sandboxes")
+
+
+@sandboxes_app.command("list")
+def list_sandboxes(
+    agent_id: Annotated[str, typer.Argument(help="Agent ID or full resource name")],
+    location: Annotated[str, typer.Option("--location", "-l", help="Google Cloud region")],
+    project: Annotated[str | None, typer.Option("--project", "-p", help="Google Cloud project ID (defaults to ADC project)")] = None,
+) -> None:
+    """List all sandboxes for an agent."""
+    try:
+        project = resolve_project(project)
+    except ConfigurationError as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(code=1)
+
+    try:
+        client = AgentEngineClient(project=project, location=location)
+        sandboxes = client.list_sandboxes(agent_id)
+
+        if not sandboxes:
+            console.print("No sandboxes found.")
+            return
+
+        table = Table(title="Sandboxes")
+        table.add_column("Sandbox ID", style="cyan")
+        table.add_column("Display Name", style="green")
+        table.add_column("State")
+        table.add_column("Created")
+        table.add_column("Expires")
+
+        for sandbox in sandboxes:
+            # Extract sandbox ID from full resource name
+            sandbox_name = getattr(sandbox, "name", "") or ""
+            sandbox_id = sandbox_name.split("/")[-1] if sandbox_name else ""
+
+            display_name = getattr(sandbox, "display_name", "") or ""
+
+            # Format state (remove STATE_ prefix if present)
+            state_raw = getattr(sandbox, "state", None)
+            if state_raw:
+                state = str(state_raw.value).replace("STATE_", "") if hasattr(state_raw, "value") else str(state_raw)
+            else:
+                state = ""
+
+            # Format timestamps compactly (YYYY-MM-DD HH:MM)
+            create_time_raw = getattr(sandbox, "create_time", None)
+            if create_time_raw:
+                create_time = create_time_raw.strftime("%Y-%m-%d %H:%M")
+            else:
+                create_time = ""
+
+            expire_time_raw = getattr(sandbox, "expire_time", None)
+            if expire_time_raw:
+                expire_time = expire_time_raw.strftime("%Y-%m-%d %H:%M")
+            else:
+                expire_time = ""
+
+            table.add_row(
+                escape(sandbox_id),
+                escape(display_name),
+                state,
+                create_time,
+                expire_time,
+            )
+
+        console.print(table)
+    except Exception as e:
+        console.print(f"[red]Error listing sandboxes: {e}[/red]")
+        raise typer.Exit(code=1)
+
+
+# Create memories subcommand group
+memories_app = typer.Typer(help="Manage agent memories.")
+app.add_typer(memories_app, name="memories")
+
+
+@memories_app.command("list")
+def list_memories(
+    agent_id: Annotated[str, typer.Argument(help="Agent ID or full resource name")],
+    location: Annotated[str, typer.Option("--location", "-l", help="Google Cloud region")],
+    project: Annotated[str | None, typer.Option("--project", "-p", help="Google Cloud project ID (defaults to ADC project)")] = None,
+) -> None:
+    """List all memories for an agent."""
+    try:
+        project = resolve_project(project)
+    except ConfigurationError as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(code=1)
+
+    try:
+        client = AgentEngineClient(project=project, location=location)
+        memories = client.list_memories(agent_id)
+
+        if not memories:
+            console.print("No memories found.")
+            return
+
+        table = Table(title="Memories")
+        table.add_column("Memory ID", style="cyan")
+        table.add_column("Display Name", style="green")
+        table.add_column("Scope")
+        table.add_column("Fact", max_width=40, overflow="ellipsis")
+        table.add_column("Created")
+        table.add_column("Expires")
+
+        for memory in memories:
+            # Extract memory ID from full resource name
+            memory_name = getattr(memory, "name", "") or ""
+            memory_id = memory_name.split("/")[-1] if memory_name else ""
+
+            display_name = getattr(memory, "display_name", "") or ""
+            fact = getattr(memory, "fact", "") or ""
+
+            # Format scope dict as key=value pairs
+            scope_raw = getattr(memory, "scope", None)
+            if scope_raw and isinstance(scope_raw, dict):
+                scope = ", ".join(f"{k}={v}" for k, v in scope_raw.items())
+            else:
+                scope = ""
+
+            # Format timestamps compactly (YYYY-MM-DD HH:MM)
+            create_time_raw = getattr(memory, "create_time", None)
+            if create_time_raw:
+                create_time = create_time_raw.strftime("%Y-%m-%d %H:%M")
+            else:
+                create_time = ""
+
+            expire_time_raw = getattr(memory, "expire_time", None)
+            if expire_time_raw:
+                expire_time = expire_time_raw.strftime("%Y-%m-%d %H:%M")
+            else:
+                expire_time = ""
+
+            table.add_row(
+                escape(memory_id),
+                escape(display_name),
+                escape(scope),
+                escape(fact),
+                create_time,
+                expire_time,
+            )
+
+        console.print(table)
+    except Exception as e:
+        console.print(f"[red]Error listing memories: {e}[/red]")
+        raise typer.Exit(code=1)
+
+
 @app.command("chat", rich_help_panel="Interactive")
 def chat(
     agent_id: Annotated[str, typer.Argument(help="Agent ID or full resource name")],
