@@ -135,12 +135,62 @@ def get_agent(
             update_time = str(getattr(agent, "update_time", "")) or "N/A"
 
             effective_identity = "N/A"
-            # Try to read from api_resource.spec.effective_identity first
+            agent_framework = "N/A"
+            class_methods = "N/A"
+            agent_card = "N/A"
+
+            # Try to read from api_resource.spec first
+            spec = None
             api_resource = getattr(agent, "api_resource", None)
             if api_resource and hasattr(api_resource, "spec") and api_resource.spec:
-                effective_identity = getattr(api_resource.spec, "effective_identity", "N/A")
-            elif hasattr(agent, "spec") and agent.spec and hasattr(agent.spec, "effective_identity"):
-                effective_identity = agent.spec.effective_identity
+                spec = api_resource.spec
+            elif hasattr(agent, "spec") and agent.spec:
+                spec = agent.spec
+
+            if spec:
+                effective_identity = getattr(spec, "effective_identity", "N/A")
+                agent_framework = getattr(spec, "agent_framework", "N/A")
+
+                raw_methods = getattr(spec, "class_methods", [])
+                method_names = []
+                for m in raw_methods:
+                    try:
+                        m_name = (getattr(m, "name", None) or 
+                                  getattr(m, "method", None) or 
+                                  (m.get("name") if hasattr(m, "get") else None) or
+                                  (m.get("method") if hasattr(m, "get") else None))
+                        if not m_name:
+                            continue
+
+                        # Extract parameters if available
+                        m_params = (getattr(m, "parameters", None) or 
+                                   (m.get("parameters") if hasattr(m, "get") else None))
+                        
+                        if m_params and isinstance(m_params, dict):
+                            properties = m_params.get("properties", {})
+                            required = m_params.get("required", [])
+                            p_list = []
+                            for p in properties.keys():
+                                if p in required:
+                                    p_list.append(f"{p}*")
+                                else:
+                                    p_list.append(p)
+                            method_names.append(f"{m_name}({', '.join(p_list)})")
+                        else:
+                            method_names.append(str(m_name))
+
+                        if agent_card == "N/A":
+                            m_metadata = getattr(m, "metadata", None) or (m.get("metadata") if hasattr(m, "get") else None)
+                            if m_metadata:
+                                card = (getattr(m_metadata, "get", lambda k, d: None)("a2a_agent_card", None) or
+                                        getattr(m_metadata, "get", lambda k, d: None)("agent_card", None))
+                                if card:
+                                    agent_card = card
+                    except Exception:
+                        pass
+
+                if method_names:
+                    class_methods = "\n  " + "\n  ".join(method_names)
 
             content = (
                 f"[bold]Name:[/bold] {escape(name)}\n"
@@ -148,7 +198,10 @@ def get_agent(
                 f"[bold]Description:[/bold] {escape(description)}\n"
                 f"[bold]Created:[/bold] {create_time}\n"
                 f"[bold]Updated:[/bold] {update_time}\n"
-                f"[bold]Effective Identity:[/bold] {escape(effective_identity)}"
+                f"[bold]Effective Identity:[/bold] {escape(effective_identity)}\n"
+                f"[bold]Agent Framework:[/bold] {escape(str(agent_framework))}\n"
+                f"[bold]Class Methods:[/bold] {escape(class_methods)}\n"
+                f"[bold]Agent Card:[/bold] {escape(str(agent_card))}"
             )
             console.print(Panel(content, title="Agent Details"))
     except Exception as e:

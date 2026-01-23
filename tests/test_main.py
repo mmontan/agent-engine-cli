@@ -14,7 +14,7 @@ runner = CliRunner()
 def test_version():
     result = runner.invoke(app, ["version"])
     assert result.exit_code == 0
-    assert "Agent Engine CLI v0.1.0" in result.stdout
+    assert "Agent Engine CLI v0.1.1" in result.stdout
 
 
 class TestListCommand:
@@ -73,6 +73,15 @@ class TestGetCommand:
     @patch("agent_engine_cli.main.AgentEngineClient")
     def test_get_agent(self, mock_client_class):
         """Test get command."""
+        mock_method = MagicMock()
+        mock_method.name = "query"
+        mock_method.metadata = {"agent_card": "{\"name\": \"test-card\"}"}
+
+        mock_spec = MagicMock()
+        mock_spec.effective_identity = "test-identity"
+        mock_spec.agent_framework = "langchain"
+        mock_spec.class_methods = [mock_method]
+
         mock_agent = MagicMock()
         mock_agent.name = None  # Explicitly set to None so it falls through to resource_name
         mock_agent.resource_name = "projects/test/locations/us-central1/reasoningEngines/agent1"
@@ -80,8 +89,8 @@ class TestGetCommand:
         mock_agent.description = "A test agent"
         mock_agent.create_time = "2024-01-01T00:00:00Z"
         mock_agent.update_time = "2024-01-02T00:00:00Z"
-        mock_agent.api_resource = None  # Explicitly set to avoid MagicMock chain
-        mock_agent.spec = None  # Explicitly set to avoid MagicMock chain
+        mock_agent.api_resource.spec = mock_spec
+        mock_agent.spec = mock_spec
 
         mock_client = MagicMock()
         mock_client.get_agent.return_value = mock_agent
@@ -93,6 +102,10 @@ class TestGetCommand:
         assert result.exit_code == 0
         assert "Test Agent" in result.stdout
         assert "A test agent" in result.stdout
+        assert "Agent Framework: langchain" in result.stdout
+        assert "Class Methods:" in result.stdout
+        assert "query" in result.stdout
+        assert "Agent Card: {\"name\": \"test-card\"}" in result.stdout
 
     @patch("agent_engine_cli.main.AgentEngineClient")
     def test_get_agent_full_output(self, mock_client_class):
