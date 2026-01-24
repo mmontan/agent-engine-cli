@@ -162,7 +162,7 @@ def get_agent(
                         if not m_name:
                             continue
 
-                        # Extract parameters if available
+                        # Extract parameters and their types
                         m_params = (getattr(m, "parameters", None) or 
                                    (m.get("parameters") if hasattr(m, "get") else None))
                         
@@ -170,14 +170,30 @@ def get_agent(
                             properties = m_params.get("properties", {})
                             required = m_params.get("required", [])
                             p_list = []
-                            for p in properties.keys():
+                            for p, p_info in properties.items():
+                                p_type = ""
+                                if isinstance(p_info, dict):
+                                    p_type = p_info.get("type", "")
+                                    if not p_type and "anyOf" in p_info:
+                                        types = [t.get("type", "any") for t in p_info["anyOf"] if isinstance(t, dict)]
+                                        p_type = "|".join(types)
+                                
+                                p_str = f"{p}: {p_type}" if p_type else p
                                 if p in required:
-                                    p_list.append(f"{p}*")
+                                    p_list.append(f"{p_str}*")
                                 else:
-                                    p_list.append(p)
+                                    p_list.append(p_str)
                             method_names.append(f"{m_name}({', '.join(p_list)})")
                         else:
                             method_names.append(str(m_name))
+
+                        # Extract and add description
+                        m_desc = (getattr(m, "description", None) or 
+                                  (m.get("description") if hasattr(m, "get") else None))
+                        if m_desc:
+                            # Clean up description and take only the first line/paragraph
+                            m_desc_clean = m_desc.strip().split("\n")[0]
+                            method_names.append(f"    {m_desc_clean}")
 
                         if agent_card == "N/A":
                             m_metadata = getattr(m, "metadata", None) or (m.get("metadata") if hasattr(m, "get") else None)
