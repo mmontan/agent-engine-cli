@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.9"
 license = "MIT"
 authors = [
-  {name = "Agent Engine Team", email = "info@agentengine.ai"}
+  {name = "Mirko Montanari"}
 ]
 keywords = ["agent", "ai", "cli", "google-cloud", "agent-engine", "gcp", "vertex-ai", "llm", "agents", "automation", "vertex"]
 classifiers = [
