@@ -1,3 +1,3 @@
-# Init file for agent_engine_cli
+"""Agent Engine CLI package."""
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
