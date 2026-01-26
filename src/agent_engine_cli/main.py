@@ -386,10 +386,6 @@ def list_sandboxes(
         client = AgentEngineClient(project=project, location=location)
         sandboxes = client.list_sandboxes(agent_id)
 
-        if not sandboxes:
-            console.print("No sandboxes found.")
-            return
-
         table = Table(title="Sandboxes")
         table.add_column("Sandbox ID", style="cyan")
         table.add_column("Display Name", style="green")
@@ -397,7 +393,9 @@ def list_sandboxes(
         table.add_column("Created")
         table.add_column("Expires")
 
+        has_items = False
         for sandbox in sandboxes:
+            has_items = True
             # Extract sandbox ID from full resource name
             sandbox_name = getattr(sandbox, "name", "") or ""
             sandbox_id = sandbox_name.split("/")[-1] if sandbox_name else ""
@@ -431,6 +429,10 @@ def list_sandboxes(
                 create_time,
                 expire_time,
             )
+
+        if not has_items:
+            console.print("No sandboxes found.")
+            return
 
         console.print(table)
     except Exception as e:
