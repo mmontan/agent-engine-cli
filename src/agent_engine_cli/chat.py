@@ -141,7 +141,7 @@ async def run_chat(
     resource_name = (
         f"projects/{project}/locations/{location}/reasoningEngines/{agent_id}"
     )
-    adk_app = client.agent_engines.get(name=resource_name)
+    adk_app = await asyncio.to_thread(client.agent_engines.get, name=resource_name)
 
     # Create session
     session = await adk_app.async_create_session(user_id=user_id)
