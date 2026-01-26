@@ -151,7 +151,7 @@ def get_agent(
                 effective_identity = getattr(spec, "effective_identity", "N/A")
                 agent_framework = getattr(spec, "agent_framework", "N/A")
 
-                raw_methods = getattr(spec, "class_methods", [])
+                raw_methods = getattr(spec, "class_methods", []) or []
                 method_names = []
                 for m in raw_methods:
                     try:
