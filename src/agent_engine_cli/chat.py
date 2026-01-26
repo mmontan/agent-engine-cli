@@ -2,6 +2,7 @@
 Interactive chat client for Agent Engine.
 """
 import asyncio
+import json
 import logging
 import os
 import warnings
@@ -15,7 +16,6 @@ def _format_tool_args(args: dict | None) -> str:
     """Format tool arguments as a compact string for display."""
     if not args:
         return ""
-    import json
 
     formatted = []
     for key, value in args.items():
