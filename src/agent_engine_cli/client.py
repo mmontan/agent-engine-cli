@@ -1,7 +1,7 @@
 """Client wrapper for Vertex AI Agent Engine API."""
 
 from datetime import datetime
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Iterator, Protocol, runtime_checkable
 
 import vertexai
 from vertexai import agent_engines
@@ -46,13 +46,13 @@ class AgentEngineClient:
             http_options={"api_version": "v1beta1"},
         )
 
-    def list_agents(self) -> list[AgentResource]:
+    def list_agents(self) -> Iterator[AgentResource]:
         """List all agents in the project.
 
         Returns:
-            List of AgentEngine api_resource instances (v1beta1)
+            Iterator of AgentEngine api_resource instances (v1beta1)
         """
-        return [agent.api_resource for agent in self._client.agent_engines.list()]
+        return (agent.api_resource for agent in self._client.agent_engines.list())
 
     def get_agent(self, agent_id: str) -> AgentResource:
         """Get details for a specific agent.

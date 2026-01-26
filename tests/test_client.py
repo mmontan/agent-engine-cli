@@ -64,7 +64,7 @@ class TestAgentEngineClient:
         client = AgentEngineClient(project="test-project", location="us-central1")
         agents = client.list_agents()
 
-        assert len(agents) == 2
+        assert len(list(agents)) == 2
         mock_vertexai.Client.return_value.agent_engines.list.assert_called_once()
 
     def test_list_agents_empty(self, mock_vertexai, mock_agent_engines, mock_types):
@@ -74,7 +74,7 @@ class TestAgentEngineClient:
         client = AgentEngineClient(project="test-project", location="us-central1")
         agents = client.list_agents()
 
-        assert len(agents) == 0
+        assert len(list(agents)) == 0
 
     def test_get_agent_with_id(self, mock_vertexai, mock_agent_engines, mock_types):
         """Test getting agent by short ID."""
