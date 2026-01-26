@@ -316,7 +316,7 @@ def list_sessions(
 
     try:
         client = AgentEngineClient(project=project, location=location)
-        sessions = client.list_sessions(agent_id)
+        sessions = list(client.list_sessions(agent_id))
 
         if not sessions:
             console.print("No sessions found.")

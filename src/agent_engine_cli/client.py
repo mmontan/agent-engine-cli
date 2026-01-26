@@ -1,7 +1,7 @@
 """Client wrapper for Vertex AI Agent Engine API."""
 
 from datetime import datetime
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Iterator, Protocol, runtime_checkable
 
 import vertexai
 from vertexai import agent_engines
@@ -121,14 +121,14 @@ class AgentEngineClient:
 
         agent_engines.delete(resource_name, force=force)
 
-    def list_sessions(self, agent_id: str) -> list:
+    def list_sessions(self, agent_id: str) -> Iterator:
         """List all sessions for an agent.
 
         Args:
             agent_id: The agent resource ID or full resource name
 
         Returns:
-            List of session objects
+            Iterator of session objects
         """
         if "/" not in agent_id:
             resource_name = (
@@ -138,7 +138,7 @@ class AgentEngineClient:
         else:
             resource_name = agent_id
 
-        return list(self._client.agent_engines.list_sessions(name=resource_name))
+        return self._client.agent_engines.list_sessions(name=resource_name)
 
     def list_sandboxes(self, agent_id: str) -> list:
         """List all sandboxes for an agent.
