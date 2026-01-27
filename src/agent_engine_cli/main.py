@@ -1,5 +1,6 @@
 import asyncio
 import json
+from collections.abc import MutableMapping
 from typing import Annotated, Literal
 
 import typer
@@ -10,8 +11,8 @@ from rich.table import Table
 
 from agent_engine_cli import __version__
 from agent_engine_cli.chat import run_chat
-from agent_engine_cli.client import AgentEngineClient
 from agent_engine_cli.config import ConfigurationError, resolve_project
+from agent_engine_cli.dependencies import get_client
 
 console = Console()
 
@@ -41,8 +42,8 @@ def list_agents(
         raise typer.Exit(code=1)
 
     try:
-        client = AgentEngineClient(project=project, location=location)
-        agents = client.list_agents()
+        client = get_client(project=project, location=location)
+        agents = list(client.list_agents())
 
         if not agents:
             console.print("No agents found.")
@@ -107,7 +108,7 @@ def get_agent(
         raise typer.Exit(code=1)
 
     try:
-        client = AgentEngineClient(project=project, location=location)
+        client = get_client(project=project, location=location)
         agent = client.get_agent(agent_id)
 
         # v1beta1 api_resource uses 'name' instead of 'resource_name'
@@ -247,7 +248,7 @@ def create_agent(
         raise typer.Exit(code=1)
 
     try:
-        client = AgentEngineClient(project=project, location=location)
+        client = get_client(project=project, location=location)
         console.print(f"Creating agent '{escape(display_name)}'...")
 
         agent = client.create_agent(
@@ -288,7 +289,7 @@ def delete_agent(
             raise typer.Exit()
 
     try:
-        client = AgentEngineClient(project=project, location=location)
+        client = get_client(project=project, location=location)
         client.delete_agent(agent_id, force=force)
         console.print(f"[red]Agent '{escape(agent_id)}' deleted.[/red]")
     except Exception as e:
@@ -315,7 +316,7 @@ def list_sessions(
         raise typer.Exit(code=1)
 
     try:
-        client = AgentEngineClient(project=project, location=location)
+        client = get_client(project=project, location=location)
         sessions = list(client.list_sessions(agent_id))
 
         if not sessions:
@@ -383,8 +384,12 @@ def list_sandboxes(
         raise typer.Exit(code=1)
 
     try:
-        client = AgentEngineClient(project=project, location=location)
-        sandboxes = client.list_sandboxes(agent_id)
+        client = get_client(project=project, location=location)
+        sandboxes = list(client.list_sandboxes(agent_id))
+
+        if not sandboxes:
+            console.print("No sandboxes found.")
+            return
 
         table = Table(title="Sandboxes")
         table.add_column("Sandbox ID", style="cyan")
@@ -393,9 +398,7 @@ def list_sandboxes(
         table.add_column("Created")
         table.add_column("Expires")
 
-        has_items = False
         for sandbox in sandboxes:
-            has_items = True
             # Extract sandbox ID from full resource name
             sandbox_name = getattr(sandbox, "name", "") or ""
             sandbox_id = sandbox_name.split("/")[-1] if sandbox_name else ""
@@ -430,10 +433,6 @@ def list_sandboxes(
                 expire_time,
             )
 
-        if not has_items:
-            console.print("No sandboxes found.")
-            return
-
         console.print(table)
     except Exception as e:
         console.print(f"[red]Error listing sandboxes: {e}[/red]")
@@ -459,8 +458,8 @@ def list_memories(
         raise typer.Exit(code=1)
 
     try:
-        client = AgentEngineClient(project=project, location=location)
-        memories = client.list_memories(agent_id)
+        client = get_client(project=project, location=location)
+        memories = list(client.list_memories(agent_id))
 
         if not memories:
             console.print("No memories found.")
@@ -484,7 +483,7 @@ def list_memories(
 
             # Format scope dict as key=value pairs
             scope_raw = getattr(memory, "scope", None)
-            if scope_raw and isinstance(scope_raw, dict):
+            if scope_raw and isinstance(scope_raw, (dict, MutableMapping)):
                 scope = ", ".join(f"{k}={v}" for k, v in scope_raw.items())
             else:
                 scope = ""
