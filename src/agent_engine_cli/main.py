@@ -22,7 +22,7 @@ app = typer.Typer(
 )
 
 
-@app.command(rich_help_panel="Utility")
+@app.command()
 def version():
     """Show the CLI version."""
     print(f"Agent Engine CLI v{__version__}")
@@ -519,7 +519,7 @@ def list_memories(
         raise typer.Exit(code=1)
 
 
-@app.command("chat", rich_help_panel="Interactive")
+@app.command("chat")
 def chat(
     agent_id: Annotated[str, typer.Argument(help="Agent ID or full resource name")],
     location: Annotated[str, typer.Option("--location", "-l", help="Google Cloud region")],
