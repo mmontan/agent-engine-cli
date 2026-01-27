@@ -462,10 +462,6 @@ def list_memories(
         client = AgentEngineClient(project=project, location=location)
         memories = client.list_memories(agent_id)
 
-        if not memories:
-            console.print("No memories found.")
-            return
-
         table = Table(title="Memories")
         table.add_column("Memory ID", style="cyan")
         table.add_column("Display Name", style="green")
@@ -474,7 +470,9 @@ def list_memories(
         table.add_column("Created")
         table.add_column("Expires")
 
+        has_items = False
         for memory in memories:
+            has_items = True
             # Extract memory ID from full resource name
             memory_name = getattr(memory, "name", "") or ""
             memory_id = memory_name.split("/")[-1] if memory_name else ""
@@ -510,6 +508,10 @@ def list_memories(
                 create_time,
                 expire_time,
             )
+
+        if not has_items:
+            console.print("No memories found.")
+            return
 
         console.print(table)
     except Exception as e:
