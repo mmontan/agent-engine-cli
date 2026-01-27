@@ -159,14 +159,14 @@ class AgentEngineClient:
 
         return self._client.agent_engines.sandboxes.list(name=resource_name)
 
-    def list_memories(self, agent_id: str) -> list:
+    def list_memories(self, agent_id: str) -> Iterator[Any]:
         """List all memories for an agent.
 
         Args:
             agent_id: The agent resource ID or full resource name
 
         Returns:
-            List of memory objects
+            Iterator of memory objects
         """
         if "/" not in agent_id:
             resource_name = (
@@ -176,4 +176,4 @@ class AgentEngineClient:
         else:
             resource_name = agent_id
 
-        return list(self._client.agent_engines.memories.list(name=resource_name))
+        return self._client.agent_engines.memories.list(name=resource_name)
