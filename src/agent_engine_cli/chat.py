@@ -56,6 +56,12 @@ def _install_api_logging_hooks(debug: bool) -> None:
     """Install monkey patches for API request/response logging."""
     from google.genai import _api_client
 
+    # Prevent repeated monkey patching
+    if getattr(
+        _api_client.BaseApiClient.async_request, "_is_logged_async_request", False
+    ):
+        return
+
     # Monkey patch async_request for non-streaming requests (like create_session)
     _original_async_request = _api_client.BaseApiClient.async_request
 
@@ -81,6 +87,7 @@ def _install_api_logging_hooks(debug: bool) -> None:
 
         return result
 
+    _logged_async_request._is_logged_async_request = True
     _api_client.BaseApiClient.async_request = _logged_async_request
 
     # Monkey patch async_request_streamed for streaming requests
