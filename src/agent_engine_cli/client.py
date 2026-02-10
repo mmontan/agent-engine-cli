@@ -3,11 +3,6 @@
 from datetime import datetime
 from typing import Any, Iterator, Protocol, runtime_checkable
 
-import vertexai
-from vertexai import agent_engines
-from vertexai import types
-
-
 @runtime_checkable
 class AgentSpec(Protocol):
     """Agent specification with identity information."""
@@ -36,6 +31,8 @@ class AgentEngineClient:
             project: Google Cloud project ID
             location: Google Cloud region
         """
+        import vertexai
+
         self.project = project
         self.location = location
         vertexai.init(project=project, location=location)
@@ -90,6 +87,8 @@ class AgentEngineClient:
         Returns:
             The created agent's api_resource
         """
+        from vertexai import types
+
         config = {
             "display_name": display_name,
         }
@@ -111,6 +110,8 @@ class AgentEngineClient:
             agent_id: The agent resource ID or full resource name
             force: Force deletion even if agent has associated resources
         """
+        from vertexai import agent_engines
+
         if "/" not in agent_id:
             resource_name = (
                 f"projects/{self.project}/locations/{self.location}/"

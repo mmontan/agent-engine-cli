@@ -1,30 +1,41 @@
 """Tests for the AgentEngineClient."""
 
+import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
 
+# We need to patch vertexai BEFORE importing AgentEngineClient if it had top-level imports.
+# But since it now has lazy imports, we can import it normally.
 from agent_engine_cli.client import AgentEngineClient
 
 
 @pytest.fixture
 def mock_vertexai():
     """Mock vertexai module."""
-    with patch("agent_engine_cli.client.vertexai") as mock_v:
+    mock_v = MagicMock()
+    # Patch sys.modules so 'import vertexai' returns our mock
+    with patch.dict(sys.modules, {"vertexai": mock_v}):
         yield mock_v
 
 
 @pytest.fixture
-def mock_agent_engines():
+def mock_agent_engines(mock_vertexai):
     """Mock agent_engines module."""
-    with patch("agent_engine_cli.client.agent_engines") as mock_ae:
+    mock_ae = MagicMock()
+    mock_vertexai.agent_engines = mock_ae
+    # Also patch sys.modules for 'from vertexai import agent_engines'
+    with patch.dict(sys.modules, {"vertexai.agent_engines": mock_ae}):
         yield mock_ae
 
 
 @pytest.fixture
-def mock_types():
+def mock_types(mock_vertexai):
     """Mock types module."""
-    with patch("agent_engine_cli.client.types") as mock_t:
+    mock_t = MagicMock()
+    mock_vertexai.types = mock_t
+    # Also patch sys.modules for 'from vertexai import types'
+    with patch.dict(sys.modules, {"vertexai.types": mock_t}):
         yield mock_t
 
 
@@ -59,17 +70,21 @@ class TestAgentEngineClient:
         mock_agent2 = MagicMock()
         mock_agent2.api_resource = mock_api_resource2
 
-        mock_vertexai.Client.return_value.agent_engines.list.return_value = [mock_agent1, mock_agent2]
+        # We need to setup the return value on the client instance created in __init__
+        # mock_vertexai.Client() returns the mock client instance
+        mock_client_instance = mock_vertexai.Client.return_value
+        mock_client_instance.agent_engines.list.return_value = [mock_agent1, mock_agent2]
 
         client = AgentEngineClient(project="test-project", location="us-central1")
         agents = client.list_agents()
 
         assert len(list(agents)) == 2
-        mock_vertexai.Client.return_value.agent_engines.list.assert_called_once()
+        mock_client_instance.agent_engines.list.assert_called_once()
 
     def test_list_agents_empty(self, mock_vertexai, mock_agent_engines, mock_types):
         """Test listing agents when none exist."""
-        mock_agent_engines.list.return_value = []
+        mock_client_instance = mock_vertexai.Client.return_value
+        mock_client_instance.agent_engines.list.return_value = []
 
         client = AgentEngineClient(project="test-project", location="us-central1")
         agents = client.list_agents()
@@ -79,36 +94,39 @@ class TestAgentEngineClient:
     def test_get_agent_with_id(self, mock_vertexai, mock_agent_engines, mock_types):
         """Test getting agent by short ID."""
         mock_agent = MagicMock()
-        mock_vertexai.Client.return_value.agent_engines.get.return_value = mock_agent
+        mock_client_instance = mock_vertexai.Client.return_value
+        mock_client_instance.agent_engines.get.return_value = mock_agent
 
         client = AgentEngineClient(project="test-project", location="us-central1")
         agent = client.get_agent("agent123")
 
         expected_name = "projects/test-project/locations/us-central1/reasoningEngines/agent123"
-        mock_vertexai.Client.return_value.agent_engines.get.assert_called_with(name=expected_name)
+        mock_client_instance.agent_engines.get.assert_called_with(name=expected_name)
 
     def test_get_agent_with_full_name(self, mock_vertexai, mock_agent_engines, mock_types):
         """Test getting agent by full resource name."""
         mock_agent = MagicMock()
-        mock_vertexai.Client.return_value.agent_engines.get.return_value = mock_agent
+        mock_client_instance = mock_vertexai.Client.return_value
+        mock_client_instance.agent_engines.get.return_value = mock_agent
 
         full_name = "projects/other-project/locations/europe-west1/reasoningEngines/agent456"
         client = AgentEngineClient(project="test-project", location="us-central1")
         agent = client.get_agent(full_name)
 
-        mock_vertexai.Client.return_value.agent_engines.get.assert_called_with(name=full_name)
+        mock_client_instance.agent_engines.get.assert_called_with(name=full_name)
 
     def test_create_agent_service_account_identity(self, mock_vertexai, mock_agent_engines, mock_types):
         """Test creating agent with service_account identity."""
         mock_result = MagicMock()
         mock_result.resource_name = "projects/test-project/locations/us-central1/reasoningEngines/new-agent"
-        mock_vertexai.Client.return_value.agent_engines.create.return_value = mock_result
+        mock_client_instance = mock_vertexai.Client.return_value
+        mock_client_instance.agent_engines.create.return_value = mock_result
 
         client = AgentEngineClient(project="test-project", location="us-central1")
         agent = client.create_agent(display_name="Test Agent", identity_type="service_account")
 
-        mock_vertexai.Client.return_value.agent_engines.create.assert_called_once()
-        call_kwargs = mock_vertexai.Client.return_value.agent_engines.create.call_args[1]
+        mock_client_instance.agent_engines.create.assert_called_once()
+        call_kwargs = mock_client_instance.agent_engines.create.call_args[1]
         assert call_kwargs["config"]["display_name"] == "Test Agent"
         assert call_kwargs["config"]["identity_type"] == mock_types.IdentityType.SERVICE_ACCOUNT
         assert "service_account" not in call_kwargs["config"]
@@ -117,7 +135,8 @@ class TestAgentEngineClient:
         """Test creating agent with a specific service account."""
         mock_result = MagicMock()
         mock_result.resource_name = "projects/test-project/locations/us-central1/reasoningEngines/new-agent"
-        mock_vertexai.Client.return_value.agent_engines.create.return_value = mock_result
+        mock_client_instance = mock_vertexai.Client.return_value
+        mock_client_instance.agent_engines.create.return_value = mock_result
 
         client = AgentEngineClient(project="test-project", location="us-central1")
         agent = client.create_agent(
@@ -126,8 +145,8 @@ class TestAgentEngineClient:
             service_account="my-sa@test-project.iam.gserviceaccount.com",
         )
 
-        mock_vertexai.Client.return_value.agent_engines.create.assert_called_once()
-        call_kwargs = mock_vertexai.Client.return_value.agent_engines.create.call_args[1]
+        mock_client_instance.agent_engines.create.assert_called_once()
+        call_kwargs = mock_client_instance.agent_engines.create.call_args[1]
         assert call_kwargs["config"]["display_name"] == "Test Agent"
         assert call_kwargs["config"]["identity_type"] == mock_types.IdentityType.SERVICE_ACCOUNT
         assert call_kwargs["config"]["service_account"] == "my-sa@test-project.iam.gserviceaccount.com"
@@ -136,13 +155,14 @@ class TestAgentEngineClient:
         """Test creating agent with agent_identity type."""
         mock_result = MagicMock()
         mock_result.resource_name = "projects/test-project/locations/us-central1/reasoningEngines/new-agent"
-        mock_vertexai.Client.return_value.agent_engines.create.return_value = mock_result
+        mock_client_instance = mock_vertexai.Client.return_value
+        mock_client_instance.agent_engines.create.return_value = mock_result
 
         client = AgentEngineClient(project="test-project", location="us-central1")
         agent = client.create_agent(display_name="Test Agent", identity_type="agent_identity")
 
-        mock_vertexai.Client.return_value.agent_engines.create.assert_called_once()
-        call_kwargs = mock_vertexai.Client.return_value.agent_engines.create.call_args[1]
+        mock_client_instance.agent_engines.create.assert_called_once()
+        call_kwargs = mock_client_instance.agent_engines.create.call_args[1]
         assert call_kwargs["config"]["display_name"] == "Test Agent"
         assert call_kwargs["config"]["identity_type"] == mock_types.IdentityType.AGENT_IDENTITY
 
