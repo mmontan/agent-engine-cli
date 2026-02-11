@@ -2,44 +2,46 @@
 
 A command-line interface to manage Agent Engine.
 
-## Installation with uv
+## Installation
 
-This project is set up to work seamlessly with `uv`.
+```bash
+# With uv (recommended)
+uv tool install agent-engine-cli
+
+# With pip
+pip install agent-engine-cli
+```
+
+After installation, the `ae` command is available globally:
+
+```bash
+ae --help
+```
+
+## Run Without Installing
+
+```bash
+python -m agent_engine_cli --help
+```
+
+## Development Setup
 
 1.  **Install uv** (if you haven't already):
     ```bash
     curl -LsSf https://astral.sh/uv/install.sh | sh
     ```
 
-2.  **Create a virtual environment and install dependencies**:
+2.  **Clone the repo and install dependencies**:
     ```bash
-    uv venv
-    source .venv/bin/activate
-    uv pip install -e .
+    git clone https://github.com/mmontan/agent-engine-cli.git
+    cd agent-engine-cli
+    uv sync
     ```
 
-3.  **Run the CLI**:
+3.  **Run the CLI locally**:
     ```bash
-    ae --help
+    uv run ae --help
     ```
-
-## Running Without Installation
-
-You can run the CLI directly without installing it:
-
-```bash
-# Using uv (recommended)
-uv run python -m agent_engine_cli.main --help
-
-# Or with plain Python (after installing dependencies)
-python -m agent_engine_cli.main --help
-```
-
-Example commands:
-```bash
-uv run python -m agent_engine_cli.main list -p PROJECT_ID -l us-central1
-uv run python -m agent_engine_cli.main get AGENT_ID -p PROJECT_ID -l us-central1
-```
 
 ## Chat with an Agent
 
