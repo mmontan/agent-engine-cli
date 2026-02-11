@@ -8,7 +8,7 @@ from google.cloud.aiplatform_v1beta1.types import ReasoningEngine, ReasoningEngi
 
 from agent_engine_cli.config import ConfigurationError
 from agent_engine_cli.main import app
-from tests.fakes import FakeAgentEngineClient, Sandbox, SandboxState
+from tests.fakes import CreateAgentCall, FakeAgentEngineClient, Sandbox, SandboxState
 
 runner = CliRunner(env={"COLUMNS": "200", "NO_COLOR": "1", "TERM": "dumb"})
 
@@ -44,11 +44,8 @@ class TestListCommand:
         mock_get_client.return_value = fake_client
 
         agent = fake_client.create_agent(display_name="Test Agent", identity_type="agent_identity")
-        # Override timestamps to be deterministic
         agent.create_time = datetime(2024, 1, 1, 12, 30, 0)
         agent.update_time = datetime(2024, 1, 2, 14, 45, 0)
-        # Note: ReasoningEngineSpec doesn't have effective_identity, so output will show N/A
-        # But create_agent assigns a name, e.g., .../agent-1
 
         result = runner.invoke(app, ["list", "--project", "test-project", "--location", "us-central1"])
         assert result.exit_code == 0
@@ -74,29 +71,7 @@ class TestGetCommand:
 
         agent = fake_client.create_agent(display_name="Test Agent", identity_type="agent_identity")
         agent.description = "A test agent"
-        # Since we use ReasoningEngineSpec, we need to adapt how we inject class_methods/metadata if we want to test that logic.
-        # ReasoningEngineSpec has class_methods as list of dicts (or protobuf structs).
-        # But here we are testing main.py's parsing logic.
-        # Since ReasoningEngineSpec protobuf structure is strict, we might struggle to inject "metadata" if it's not a field.
-        # But let's check ReasoningEngineSpec definition again. class_methods is a repeated field.
-        # Each item in class_methods likely has a structure.
-        # If we can't easily populate it to match test expectation, we might skip the detailed class method assertions for now
-        # OR we construct the fake agent to have these properties.
 
-        # However, AgentEngineClient returns ReasoningEngine objects.
-        # main.py expects agent.spec.class_methods to be a list of objects that have .name or .method or dicts.
-
-        # Let's simplify and just verify the agent is retrieved.
-        # Or if we want to test class methods, we need to populate them in the fake.
-
-        # In FakeAgentEngineClient.create_agent, we create a basic spec.
-        # We can modify it here.
-
-        # But wait, ReasoningEngineSpec class_methods are defined as repeated Struct or similar?
-        # Checking google.cloud.aiplatform_v1beta1.types.ReasoningEngineSpec again...
-        # It has `class_methods`.
-
-        # For now, I will assert on what IS present.
         result = runner.invoke(
             app, ["get", agent.name.split("/")[-1], "--project", "test-project", "--location", "us-central1"]
         )
@@ -143,10 +118,12 @@ class TestCreateCommand:
         assert "Agent created successfully" in result.stdout
         assert "agent-1" in result.stdout
 
-        # Verify it was created in fake client
-        agents = list(fake_client.list_agents())
-        assert len(agents) == 1
-        assert agents[0].display_name == "My Agent"
+        assert len(fake_client.create_agent_calls) == 1
+        assert fake_client.create_agent_calls[0] == CreateAgentCall(
+            display_name="My Agent",
+            identity_type="agent_identity",
+            service_account=None,
+        )
 
     @patch("agent_engine_cli.main.get_client")
     def test_create_agent_with_service_account_identity(self, mock_get_client):
@@ -159,11 +136,12 @@ class TestCreateCommand:
         )
         assert result.exit_code == 0
 
-        agents = list(fake_client.list_agents())
-        assert len(agents) == 1
-        # Fake client doesn't store identity type yet (as ReasoningEngineSpec doesn't have it easily), but call succeeded.
-        # If we updated FakeAgentEngineClient to store args somewhere we could verify.
-        # But here we verify the command succeeded and created an agent.
+        assert len(fake_client.create_agent_calls) == 1
+        assert fake_client.create_agent_calls[0] == CreateAgentCall(
+            display_name="My Agent",
+            identity_type="service_account",
+            service_account=None,
+        )
 
     @patch("agent_engine_cli.main.get_client")
     def test_create_agent_with_custom_service_account(self, mock_get_client):
@@ -177,8 +155,12 @@ class TestCreateCommand:
         )
         assert result.exit_code == 0
 
-        agents = list(fake_client.list_agents())
-        assert len(agents) == 1
+        assert len(fake_client.create_agent_calls) == 1
+        assert fake_client.create_agent_calls[0] == CreateAgentCall(
+            display_name="My Agent",
+            identity_type="service_account",
+            service_account="my-sa@proj.iam.gserviceaccount.com",
+        )
 
 
 class TestDeleteCommand:
@@ -197,9 +179,6 @@ class TestDeleteCommand:
         fake_client = FakeAgentEngineClient(project="test-project", location="us-central1")
         mock_get_client.return_value = fake_client
 
-        # Pre-populate agent
-        # We need to ensure agent123 exists, but create_agent generates IDs.
-        # We can either use the ID generated or manually insert into _agents map.
         agent_name = "projects/test-project/locations/us-central1/reasoningEngines/agent123"
         fake_client._agents[agent_name] = ReasoningEngine(name=agent_name)
 
@@ -255,9 +234,6 @@ class TestDeleteCommand:
 
         agent_name = "projects/test-project/locations/us-central1/reasoningEngines/agent123"
         fake_client._agents[agent_name] = ReasoningEngine(name=agent_name)
-
-        # Add a session to verify force behavior logic if we implemented it in Fake
-        # Our fake implementation checks for child resources.
         fake_client._sessions[agent_name] = [Session(name=f"{agent_name}/sessions/s1")]
 
         result = runner.invoke(
@@ -272,8 +248,6 @@ class TestDeleteCommand:
         """Test delete command when an error occurs (e.g. not found)."""
         fake_client = FakeAgentEngineClient(project="test-project", location="us-central1")
         mock_get_client.return_value = fake_client
-
-        # Do not add agent123
 
         result = runner.invoke(
             app,
@@ -456,7 +430,6 @@ class TestSessionsListCommand:
         fake_client = FakeAgentEngineClient(project="test-project", location="us-central1")
         mock_get_client.return_value = fake_client
 
-        # Create agent
         agent = fake_client.create_agent(display_name="Test Agent", identity_type="agent_identity")
 
         result = runner.invoke(
@@ -478,18 +451,8 @@ class TestSessionsListCommand:
             name=f"{agent_name}/sessions/session123",
             user_id="user-456",
             create_time=datetime(2024, 1, 15, 10, 30, 0),
-            expire_time=datetime(2024, 1, 16, 10, 30, 0)
+            expire_time=datetime(2024, 1, 16, 10, 30, 0),
         )
-        # Session in types might not have display_name? Let's check.
-        # If not, we might fail assertion.
-        # Checking types again...
-        # Wait, I don't recall Session having display_name.
-        # But main.py uses getattr(session, "display_name", "")
-        # If it's missing, it prints empty string.
-        # The test expects "my_session".
-        # If Session proto has no display_name, I can't set it easily.
-        # I'll skip setting display_name and assert on ID and User ID.
-
         fake_client._sessions[agent_name] = [session]
 
         result = runner.invoke(
@@ -497,7 +460,6 @@ class TestSessionsListCommand:
         )
         assert result.exit_code == 0
         assert "session123" in result.stdout
-        # assert "my_session" in result.stdout  # Session proto might not support this
         assert "user-456" in result.stdout
         assert "2024-01-15" in result.stdout
 
@@ -506,9 +468,6 @@ class TestSessionsListCommand:
         """Test sessions list when an error occurs."""
         fake_client = FakeAgentEngineClient(project="test-project", location="us-central1")
         mock_get_client.return_value = fake_client
-
-        # Do not create agent, so get_agent raises Exception or list_sessions fails if we implemented check
-        # FakeAgentEngineClient.list_sessions calls get_agent which raises if not found.
 
         result = runner.invoke(
             app, ["sessions", "list", "agent123", "--project", "test-project", "--location", "us-central1"]
@@ -524,7 +483,6 @@ class TestSessionsListCommand:
         fake_client = FakeAgentEngineClient(project="adc-project", location="us-central1")
         mock_get_client.return_value = fake_client
 
-        # Create agent to avoid error
         agent_name = "projects/adc-project/locations/us-central1/reasoningEngines/agent1"
         fake_client._agents[agent_name] = ReasoningEngine(name=agent_name)
 
@@ -549,7 +507,6 @@ class TestSandboxesListCommand:
         fake_client = FakeAgentEngineClient(project="test-project", location="us-central1")
         mock_get_client.return_value = fake_client
 
-        # Create agent
         agent = fake_client.create_agent(display_name="Test Agent", identity_type="agent_identity")
 
         result = runner.invoke(
@@ -629,7 +586,6 @@ class TestMemoriesListCommand:
         fake_client = FakeAgentEngineClient(project="test-project", location="us-central1")
         mock_get_client.return_value = fake_client
 
-        # Create agent
         agent = fake_client.create_agent(display_name="Test Agent", identity_type="agent_identity")
 
         result = runner.invoke(
@@ -672,8 +628,6 @@ class TestMemoriesListCommand:
         fake_client = FakeAgentEngineClient(project="test-project", location="us-central1")
         mock_get_client.return_value = fake_client
 
-        # Don't create agent
-
         result = runner.invoke(
             app, ["memories", "list", "agent123", "--project", "test-project", "--location", "us-central1"]
         )
@@ -688,7 +642,6 @@ class TestMemoriesListCommand:
         fake_client = FakeAgentEngineClient(project="adc-project", location="us-central1")
         mock_get_client.return_value = fake_client
 
-        # Create agent in fake client so list_memories doesn't fail with Agent not found
         agent_name = "projects/adc-project/locations/us-central1/reasoningEngines/agent1"
         fake_client._agents[agent_name] = ReasoningEngine(name=agent_name)
 
