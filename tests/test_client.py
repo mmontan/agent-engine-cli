@@ -10,22 +10,28 @@ from agent_engine_cli.client import AgentEngineClient
 @pytest.fixture
 def mock_vertexai():
     """Mock vertexai module."""
-    with patch("agent_engine_cli.client.vertexai") as mock_v:
+    mock_v = MagicMock()
+    mock_v.types = MagicMock()
+    mock_v.agent_engines = MagicMock()
+
+    with patch.dict("sys.modules", {
+        "vertexai": mock_v,
+        "vertexai.types": mock_v.types,
+        "vertexai.agent_engines": mock_v.agent_engines
+    }):
         yield mock_v
 
 
 @pytest.fixture
-def mock_agent_engines():
+def mock_agent_engines(mock_vertexai):
     """Mock agent_engines module."""
-    with patch("agent_engine_cli.client.agent_engines") as mock_ae:
-        yield mock_ae
+    return mock_vertexai.agent_engines
 
 
 @pytest.fixture
-def mock_types():
+def mock_types(mock_vertexai):
     """Mock types module."""
-    with patch("agent_engine_cli.client.types") as mock_t:
-        yield mock_t
+    return mock_vertexai.types
 
 
 class TestAgentEngineClient:
