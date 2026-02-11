@@ -4,8 +4,8 @@ from agent_engine_cli.main import app
 
 runner = CliRunner()
 
-@patch("agent_engine_cli.main.AgentEngineClient")
-def test_get_agent_with_none_class_methods(mock_client_class):
+@patch("agent_engine_cli.main.get_client")
+def test_get_agent_with_none_class_methods(mock_get_client):
     """Test get command when spec.class_methods is None (regression test)."""
     
     # Mock spec with class_methods=None
@@ -25,7 +25,7 @@ def test_get_agent_with_none_class_methods(mock_client_class):
 
     mock_client = MagicMock()
     mock_client.get_agent.return_value = mock_agent
-    mock_client_class.return_value = mock_client
+    mock_get_client.return_value = mock_client
 
     result = runner.invoke(
         app, ["get", "agent1", "--project", "test-project", "--location", "us-central1"]
