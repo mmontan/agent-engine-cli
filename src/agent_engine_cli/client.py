@@ -44,6 +44,31 @@ class AgentEngineClient:
             http_options={"api_version": "v1beta1"},
         )
 
+    def _resolve_resource_name(self, agent_id: str) -> str:
+        """Resolve an agent ID or full resource name to a full resource name.
+
+        Args:
+            agent_id: The agent resource ID or full resource name.
+
+        Returns:
+            The full resource name.
+
+        Raises:
+            ValueError: If agent_id is empty or contains invalid characters.
+        """
+        if not agent_id or not agent_id.strip():
+            raise ValueError("agent_id must not be empty")
+        if any(c.isspace() or ord(c) < 32 for c in agent_id):
+            raise ValueError(
+                f"agent_id contains invalid characters: {agent_id!r}"
+            )
+        if "/" not in agent_id:
+            return (
+                f"projects/{self.project}/locations/{self.location}/"
+                f"reasoningEngines/{agent_id}"
+            )
+        return agent_id
+
     def list_agents(self) -> Iterator[AgentResource]:
         """List all agents in the project.
 
@@ -61,13 +86,7 @@ class AgentEngineClient:
         Returns:
             AgentEngine instance with agent details
         """
-        if "/" not in agent_id:
-            resource_name = (
-                f"projects/{self.project}/locations/{self.location}/"
-                f"reasoningEngines/{agent_id}"
-            )
-        else:
-            resource_name = agent_id
+        resource_name = self._resolve_resource_name(agent_id)
 
         agent = self._client.agent_engines.get(name=resource_name)
         return getattr(agent, "api_resource", agent)
@@ -113,13 +132,7 @@ class AgentEngineClient:
         """
         from vertexai import agent_engines
 
-        if "/" not in agent_id:
-            resource_name = (
-                f"projects/{self.project}/locations/{self.location}/"
-                f"reasoningEngines/{agent_id}"
-            )
-        else:
-            resource_name = agent_id
+        resource_name = self._resolve_resource_name(agent_id)
 
         agent_engines.delete(resource_name, force=force)
 
@@ -132,13 +145,7 @@ class AgentEngineClient:
         Returns:
             Iterator of session objects
         """
-        if "/" not in agent_id:
-            resource_name = (
-                f"projects/{self.project}/locations/{self.location}/"
-                f"reasoningEngines/{agent_id}"
-            )
-        else:
-            resource_name = agent_id
+        resource_name = self._resolve_resource_name(agent_id)
 
         return self._client.agent_engines.list_sessions(name=resource_name)
 
@@ -151,13 +158,7 @@ class AgentEngineClient:
         Returns:
             Iterator of sandbox objects
         """
-        if "/" not in agent_id:
-            resource_name = (
-                f"projects/{self.project}/locations/{self.location}/"
-                f"reasoningEngines/{agent_id}"
-            )
-        else:
-            resource_name = agent_id
+        resource_name = self._resolve_resource_name(agent_id)
 
         return self._client.agent_engines.sandboxes.list(name=resource_name)
 
@@ -170,12 +171,6 @@ class AgentEngineClient:
         Returns:
             Iterator of memory objects
         """
-        if "/" not in agent_id:
-            resource_name = (
-                f"projects/{self.project}/locations/{self.location}/"
-                f"reasoningEngines/{agent_id}"
-            )
-        else:
-            resource_name = agent_id
+        resource_name = self._resolve_resource_name(agent_id)
 
         return self._client.agent_engines.memories.list(name=resource_name)

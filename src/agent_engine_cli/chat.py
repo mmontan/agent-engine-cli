@@ -8,6 +8,7 @@ import os
 import warnings
 
 from rich.console import Console
+from rich.markup import escape
 
 console = Console()
 
@@ -131,6 +132,10 @@ async def run_chat(
         pass
 
     if debug:
+        console.print(
+            "[yellow]Warning: Debug mode logs HTTP requests/responses which "
+            "may include authentication tokens and credentials.[/yellow]"
+        )
         _setup_debug_logging()
         _install_api_logging_hooks(debug=True)
 
@@ -147,7 +152,7 @@ async def run_chat(
     session = await adk_app.async_create_session(user_id=user_id)
     session_id = session["id"]
 
-    console.print(f"[green]Ready.[/green] User: {user_id}, Session: {session_id}\n")
+    console.print(f"[green]Ready.[/green] User: {escape(user_id)}, Session: {escape(session_id)}\n")
     console.print("Type your message and press Enter. Type 'quit' or 'exit' to end.\n")
 
     # Main loop
@@ -201,7 +206,7 @@ async def run_chat(
                     tools_used.append(tool_name)
                     # Print tool call immediately
                     args_str = _format_tool_args(tool_args)
-                    console.print(f"[dim]\\[{tool_name}({args_str})][/dim]")
+                    console.print(f"[dim]\\[{escape(tool_name)}({escape(args_str)})][/dim]")
 
                 # Extract Text
                 text = None
@@ -220,6 +225,6 @@ async def run_chat(
             )
 
         if full_response_text:
-            console.print(f"\n[cyan]Agent:[/cyan] {''.join(full_response_text)}")
+            console.print(f"\n[cyan]Agent:[/cyan] {escape(''.join(full_response_text))}")
 
         print()  # Final newline

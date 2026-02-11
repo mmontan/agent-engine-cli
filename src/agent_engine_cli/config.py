@@ -27,12 +27,13 @@ def resolve_project(project: str | None) -> str:
     # Try to get project from Application Default Credentials
     try:
         import google.auth
+        import google.auth.exceptions
 
         _, adc_project = google.auth.default()
         if adc_project:
             console.print(f"[dim]Using project from ADC: {adc_project}[/dim]")
             return adc_project
-    except Exception:
+    except (google.auth.exceptions.DefaultCredentialsError, ImportError):
         pass
 
     raise ConfigurationError(

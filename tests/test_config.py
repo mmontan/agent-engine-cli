@@ -39,11 +39,21 @@ class TestResolveProject:
         assert "gcloud auth application-default set-quota-project" in str(exc_info.value)
 
     @patch("google.auth.default")
-    def test_error_when_adc_raises_exception(self, mock_auth_default):
+    def test_error_when_adc_raises_credentials_error(self, mock_auth_default):
         """Test that ConfigurationError is raised when ADC fails."""
-        mock_auth_default.side_effect = Exception("ADC not configured")
+        from google.auth.exceptions import DefaultCredentialsError
+
+        mock_auth_default.side_effect = DefaultCredentialsError("ADC not configured")
 
         with pytest.raises(ConfigurationError) as exc_info:
             resolve_project(None)
 
         assert "No project specified" in str(exc_info.value)
+
+    @patch("google.auth.default")
+    def test_unexpected_exception_propagates(self, mock_auth_default):
+        """Test that unexpected exceptions from google.auth are not swallowed."""
+        mock_auth_default.side_effect = RuntimeError("Unexpected internal error")
+
+        with pytest.raises(RuntimeError, match="Unexpected internal error"):
+            resolve_project(None)

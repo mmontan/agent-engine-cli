@@ -175,3 +175,47 @@ class TestAgentEngineClient:
 
         expected_name = "projects/test-project/locations/us-central1/reasoningEngines/agent123"
         mock_agent_engines.delete.assert_called_with(expected_name, force=True)
+
+
+class TestResolveResourceName:
+    def test_short_id_expanded(self, mock_vertexai, mock_agent_engines, mock_types):
+        """Test that a short ID is expanded to a full resource name."""
+        client = AgentEngineClient(project="test-project", location="us-central1")
+        result = client._resolve_resource_name("agent123")
+        assert result == "projects/test-project/locations/us-central1/reasoningEngines/agent123"
+
+    def test_full_name_returned_as_is(self, mock_vertexai, mock_agent_engines, mock_types):
+        """Test that a full resource name is returned unchanged."""
+        client = AgentEngineClient(project="test-project", location="us-central1")
+        full_name = "projects/other/locations/eu/reasoningEngines/x"
+        assert client._resolve_resource_name(full_name) == full_name
+
+    def test_empty_string_raises(self, mock_vertexai, mock_agent_engines, mock_types):
+        """Test that an empty agent_id raises ValueError."""
+        client = AgentEngineClient(project="test-project", location="us-central1")
+        with pytest.raises(ValueError, match="must not be empty"):
+            client._resolve_resource_name("")
+
+    def test_whitespace_only_raises(self, mock_vertexai, mock_agent_engines, mock_types):
+        """Test that a whitespace-only agent_id raises ValueError."""
+        client = AgentEngineClient(project="test-project", location="us-central1")
+        with pytest.raises(ValueError, match="must not be empty"):
+            client._resolve_resource_name("   ")
+
+    def test_control_characters_raises(self, mock_vertexai, mock_agent_engines, mock_types):
+        """Test that agent_id with control characters raises ValueError."""
+        client = AgentEngineClient(project="test-project", location="us-central1")
+        with pytest.raises(ValueError, match="invalid characters"):
+            client._resolve_resource_name("agent\x00id")
+
+    def test_id_with_spaces_raises(self, mock_vertexai, mock_agent_engines, mock_types):
+        """Test that agent_id with spaces raises ValueError."""
+        client = AgentEngineClient(project="test-project", location="us-central1")
+        with pytest.raises(ValueError, match="invalid characters"):
+            client._resolve_resource_name("agent id")
+
+    def test_get_agent_empty_id_raises(self, mock_vertexai, mock_agent_engines, mock_types):
+        """Test that get_agent with empty ID raises ValueError."""
+        client = AgentEngineClient(project="test-project", location="us-central1")
+        with pytest.raises(ValueError):
+            client.get_agent("")

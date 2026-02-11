@@ -37,7 +37,7 @@ def list_agents(
     try:
         project = resolve_project(project)
     except ConfigurationError as e:
-        console.print(f"[red]Error: {e}[/red]")
+        console.print(f"[red]Error: {escape(str(e))}[/red]")
         raise typer.Exit(code=1)
 
     try:
@@ -88,7 +88,7 @@ def list_agents(
 
         console.print(table)
     except Exception as e:
-        console.print(f"[red]Error listing agents: {e}[/red]")
+        console.print(f"[red]Error listing agents: {escape(str(e))}[/red]")
         raise typer.Exit(code=1)
 
 
@@ -103,7 +103,7 @@ def get_agent(
     try:
         project = resolve_project(project)
     except ConfigurationError as e:
-        console.print(f"[red]Error: {e}[/red]")
+        console.print(f"[red]Error: {escape(str(e))}[/red]")
         raise typer.Exit(code=1)
 
     try:
@@ -221,7 +221,7 @@ def get_agent(
             )
             console.print(Panel(content, title="Agent Details"))
     except Exception as e:
-        console.print(f"[red]Error getting agent: {e}[/red]")
+        console.print(f"[red]Error getting agent: {escape(str(e))}[/red]")
         raise typer.Exit(code=1)
 
 
@@ -243,7 +243,7 @@ def create_agent(
     try:
         project = resolve_project(project)
     except ConfigurationError as e:
-        console.print(f"[red]Error: {e}[/red]")
+        console.print(f"[red]Error: {escape(str(e))}[/red]")
         raise typer.Exit(code=1)
 
     try:
@@ -262,7 +262,7 @@ def create_agent(
         console.print(f"Name: {name}")
         console.print(f"Resource: {resource_name}")
     except Exception as e:
-        console.print(f"[red]Error creating agent: {e}[/red]")
+        console.print(f"[red]Error creating agent: {escape(str(e))}[/red]")
         raise typer.Exit(code=1)
 
 
@@ -278,7 +278,7 @@ def delete_agent(
     try:
         project = resolve_project(project)
     except ConfigurationError as e:
-        console.print(f"[red]Error: {e}[/red]")
+        console.print(f"[red]Error: {escape(str(e))}[/red]")
         raise typer.Exit(code=1)
 
     if not yes:
@@ -292,7 +292,7 @@ def delete_agent(
         client.delete_agent(agent_id, force=force)
         console.print(f"[red]Agent '{escape(agent_id)}' deleted.[/red]")
     except Exception as e:
-        console.print(f"[red]Error deleting agent: {e}[/red]")
+        console.print(f"[red]Error deleting agent: {escape(str(e))}[/red]")
         raise typer.Exit(code=1)
 
 
@@ -311,7 +311,7 @@ def list_sessions(
     try:
         project = resolve_project(project)
     except ConfigurationError as e:
-        console.print(f"[red]Error: {e}[/red]")
+        console.print(f"[red]Error: {escape(str(e))}[/red]")
         raise typer.Exit(code=1)
 
     try:
@@ -360,7 +360,7 @@ def list_sessions(
 
         console.print(table)
     except Exception as e:
-        console.print(f"[red]Error listing sessions: {e}[/red]")
+        console.print(f"[red]Error listing sessions: {escape(str(e))}[/red]")
         raise typer.Exit(code=1)
 
 
@@ -379,7 +379,7 @@ def list_sandboxes(
     try:
         project = resolve_project(project)
     except ConfigurationError as e:
-        console.print(f"[red]Error: {e}[/red]")
+        console.print(f"[red]Error: {escape(str(e))}[/red]")
         raise typer.Exit(code=1)
 
     try:
@@ -436,7 +436,7 @@ def list_sandboxes(
 
         console.print(table)
     except Exception as e:
-        console.print(f"[red]Error listing sandboxes: {e}[/red]")
+        console.print(f"[red]Error listing sandboxes: {escape(str(e))}[/red]")
         raise typer.Exit(code=1)
 
 
@@ -455,7 +455,7 @@ def list_memories(
     try:
         project = resolve_project(project)
     except ConfigurationError as e:
-        console.print(f"[red]Error: {e}[/red]")
+        console.print(f"[red]Error: {escape(str(e))}[/red]")
         raise typer.Exit(code=1)
 
     try:
@@ -515,7 +515,7 @@ def list_memories(
 
         console.print(table)
     except Exception as e:
-        console.print(f"[red]Error listing memories: {e}[/red]")
+        console.print(f"[red]Error listing memories: {escape(str(e))}[/red]")
         raise typer.Exit(code=1)
 
 
@@ -531,7 +531,7 @@ def chat(
     try:
         project = resolve_project(project)
     except ConfigurationError as e:
-        console.print(f"[red]Error: {e}[/red]")
+        console.print(f"[red]Error: {escape(str(e))}[/red]")
         raise typer.Exit(code=1)
 
     try:
@@ -545,7 +545,7 @@ def chat(
     except KeyboardInterrupt:
         console.print("\n[yellow]Chat session ended.[/yellow]")
     except Exception as e:
-        console.print(f"[red]Error in chat session: {e}[/red]")
+        console.print(f"[red]Error in chat session: {escape(str(e))}[/red]")
         raise typer.Exit(code=1)
 
 
