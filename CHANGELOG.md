@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] - 2026-02-10
+
+### Security
+
+- Escape all dynamic values in Rich `console.print()` calls to prevent markup injection from agent responses and API errors.
+- Add credential exposure warning when `--debug` mode is enabled.
+- Remove unused `requests` dependency to reduce attack surface.
+- Validate agent IDs to reject empty, whitespace-only, and control-character inputs.
+- Narrow exception handling in ADC config resolution to avoid swallowing unexpected errors.
+
+### Changed
+
+- Minimum Python version bumped from 3.10 to 3.11.
+- Deduplicated resource name construction into a shared `_resolve_resource_name()` helper.
+
 ## [0.1.3] - 2026-01-25
 
 ### Added

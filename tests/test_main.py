@@ -14,7 +14,7 @@ runner = CliRunner(env={"COLUMNS": "200", "NO_COLOR": "1", "TERM": "dumb"})
 def test_version():
     result = runner.invoke(app, ["version"])
     assert result.exit_code == 0
-    assert "Agent Engine CLI v0.1.3" in result.stdout
+    assert "Agent Engine CLI v0.1.4" in result.stdout
 
 
 class TestListCommand:
