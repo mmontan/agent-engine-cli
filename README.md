@@ -6,9 +6,9 @@ A command-line interface to manage Agent Engine.
 
 ```bash
 # With uv (recommended)
-uv tool install agent-engine-cli
+uv tool install agent-engine-cli --python 3.11
 
-# With pip
+# With pip (requires Python 3.11+)
 pip install agent-engine-cli
 ```
 
