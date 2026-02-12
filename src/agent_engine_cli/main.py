@@ -1,6 +1,7 @@
 import asyncio
 import json
 from collections.abc import MutableMapping
+from dataclasses import dataclass
 from typing import Annotated, Literal
 
 import typer
@@ -16,11 +17,68 @@ from agent_engine_cli.dependencies import get_client
 
 console = Console()
 
+
+@dataclass
+class State:
+    location: str | None = None
+    project: str | None = None
+    base_url: str | None = None
+    api_version: str | None = None
+
+
+state = State()
+
+
+def get_ready_client():
+    """Helper to resolve project and return an initialized client."""
+    if not state.location:
+        console.print("[red]Error: Location is required. Use --location or set it globally.[/red]")
+        raise typer.Exit(code=1)
+
+    try:
+        project = resolve_project(state.project)
+        return get_client(
+            project=project,
+            location=state.location,
+            base_url=state.base_url,
+            api_version=state.api_version,
+        )
+    except (ConfigurationError, Exception) as e:
+        console.print(f"[red]Error: {escape(str(e))}[/red]")
+        raise typer.Exit(code=1)
+
+
+def get_id(resource: any) -> str:
+    """Extract ID from a resource name string or object."""
+    name = resource if isinstance(resource, str) else (getattr(resource, "name", None) or getattr(resource, "resource_name", ""))
+    return name.split("/")[-1] if name else ""
+
+
 app = typer.Typer(
     help="Agent Engine CLI - Manage your agents with ease.",
     no_args_is_help=True,
     add_completion=False,
 )
+
+
+@app.callback()
+def main(
+    location: Annotated[
+        str | None, typer.Option("--location", "-l", help="Google Cloud region", envvar="CLOUD_SDK_LOCATION")
+    ] = None,
+    project: Annotated[
+        str | None, typer.Option("--project", "-p", help="Google Cloud project ID (defaults to ADC project)", envvar="CLOUD_SDK_PROJECT")
+    ] = None,
+    base_url: Annotated[str | None, typer.Option("--base-url", help="Override the Vertex AI base URL")] = None,
+    api_version: Annotated[str | None, typer.Option("--api-version", help="Override the API version")] = None,
+):
+    """
+    Agent Engine CLI - Manage your agents with ease.
+    """
+    state.location = location
+    state.project = project
+    state.base_url = base_url
+    state.api_version = api_version
 
 
 @app.command()
@@ -30,21 +88,10 @@ def version():
 
 
 @app.command("list")
-def list_agents(
-    location: Annotated[str, typer.Option("--location", "-l", help="Google Cloud region")],
-    project: Annotated[str | None, typer.Option("--project", "-p", help="Google Cloud project ID (defaults to ADC project)")] = None,
-    base_url: Annotated[str | None, typer.Option("--base-url", help="Override the Vertex AI base URL")] = None,
-    api_version: Annotated[str | None, typer.Option("--api-version", help="Override the API version")] = None,
-) -> None:
+def list_agents() -> None:
     """List all agents in the project."""
+    client = get_ready_client()
     try:
-        project = resolve_project(project)
-    except ConfigurationError as e:
-        console.print(f"[red]Error: {escape(str(e))}[/red]")
-        raise typer.Exit(code=1)
-
-    try:
-        client = get_client(project=project, location=location, base_url=base_url, api_version=api_version)
         agents = list(client.list_agents())
 
         if not agents:
@@ -59,9 +106,7 @@ def list_agents(
         table.add_column("Identity", overflow="fold")
 
         for agent in agents:
-            # v1beta1 api_resource uses 'name' instead of 'resource_name'
-            agent_name = getattr(agent, "name", None) or getattr(agent, "resource_name", "")
-            name = agent_name.split("/")[-1] if agent_name else ""
+            name = get_id(agent)
             display_name = getattr(agent, "display_name", "") or ""
 
             # Format timestamps compactly (YYYY-MM-DD HH:MM)
@@ -98,29 +143,16 @@ def list_agents(
 @app.command("get")
 def get_agent(
     agent_id: Annotated[str, typer.Argument(help="Agent ID or full resource name")],
-    location: Annotated[str, typer.Option("--location", "-l", help="Google Cloud region")],
-    project: Annotated[str | None, typer.Option("--project", "-p", help="Google Cloud project ID (defaults to ADC project)")] = None,
     full: Annotated[bool, typer.Option("--full", "-f", help="Show full JSON output")] = False,
-    base_url: Annotated[str | None, typer.Option("--base-url", help="Override the Vertex AI base URL")] = None,
-    api_version: Annotated[str | None, typer.Option("--api-version", help="Override the API version")] = None,
 ) -> None:
     """Get details for a specific agent."""
+    client = get_ready_client()
     try:
-        project = resolve_project(project)
-    except ConfigurationError as e:
-        console.print(f"[red]Error: {escape(str(e))}[/red]")
-        raise typer.Exit(code=1)
-
-    try:
-        client = get_client(project=project, location=location, base_url=base_url, api_version=api_version)
         agent = client.get_agent(agent_id)
-
-        # v1beta1 api_resource uses 'name' instead of 'resource_name'
-        agent_resource_name = getattr(agent, "name", None) or getattr(agent, "resource_name", "")
 
         if full:
             agent_dict = {
-                "resource_name": agent_resource_name,
+                "resource_name": getattr(agent, "name", None) or getattr(agent, "resource_name", ""),
                 "display_name": getattr(agent, "display_name", None),
                 "description": getattr(agent, "description", None),
                 "create_time": str(getattr(agent, "create_time", None)),
@@ -133,7 +165,7 @@ def get_agent(
                 agent_dict["spec"] = str(agent.spec)
             console.print(json.dumps(agent_dict, indent=2, default=str))
         else:
-            name = agent_resource_name.split("/")[-1] if agent_resource_name else ""
+            name = get_id(agent)
             display_name = getattr(agent, "display_name", "") or "N/A"
             description = getattr(agent, "description", "") or "N/A"
             create_time = str(getattr(agent, "create_time", "")) or "N/A"
@@ -233,8 +265,6 @@ def get_agent(
 @app.command("create")
 def create_agent(
     display_name: Annotated[str, typer.Argument(help="Display name for the agent")],
-    location: Annotated[str, typer.Option("--location", "-l", help="Google Cloud region")],
-    project: Annotated[str | None, typer.Option("--project", "-p", help="Google Cloud project ID (defaults to ADC project)")] = None,
     identity: Annotated[
         Literal["agent_identity", "service_account"],
         typer.Option("--identity", "-i", help="Identity type for the agent"),
@@ -243,18 +273,10 @@ def create_agent(
         str | None,
         typer.Option("--service-account", "-s", help="Service account email (only used with --identity service_account)"),
     ] = None,
-    base_url: Annotated[str | None, typer.Option("--base-url", help="Override the Vertex AI base URL")] = None,
-    api_version: Annotated[str | None, typer.Option("--api-version", help="Override the API version")] = None,
 ) -> None:
     """Create a new agent (without deploying code)."""
+    client = get_ready_client()
     try:
-        project = resolve_project(project)
-    except ConfigurationError as e:
-        console.print(f"[red]Error: {escape(str(e))}[/red]")
-        raise typer.Exit(code=1)
-
-    try:
-        client = get_client(project=project, location=location, base_url=base_url, api_version=api_version)
         console.print(f"Creating agent '{escape(display_name)}'...")
 
         agent = client.create_agent(
@@ -263,8 +285,8 @@ def create_agent(
             service_account=service_account,
         )
 
-        resource_name = agent.name if hasattr(agent, "name") else agent.resource_name
-        name = resource_name.split("/")[-1] if resource_name else ""
+        name = get_id(agent)
+        resource_name = getattr(agent, "name", None) or getattr(agent, "resource_name", "")
         console.print("[green]Agent created successfully![/green]")
         console.print(f"Name: {name}")
         console.print(f"Resource: {resource_name}")
@@ -276,28 +298,18 @@ def create_agent(
 @app.command("delete")
 def delete_agent(
     agent_id: Annotated[str, typer.Argument(help="Agent ID or full resource name")],
-    location: Annotated[str, typer.Option("--location", "-l", help="Google Cloud region")],
-    project: Annotated[str | None, typer.Option("--project", "-p", help="Google Cloud project ID (defaults to ADC project)")] = None,
     force: Annotated[bool, typer.Option("--force", "-f", help="Force deletion of agents with sessions/memory")] = False,
     yes: Annotated[bool, typer.Option("--yes", "-y", help="Skip confirmation prompt")] = False,
-    base_url: Annotated[str | None, typer.Option("--base-url", help="Override the Vertex AI base URL")] = None,
-    api_version: Annotated[str | None, typer.Option("--api-version", help="Override the API version")] = None,
 ) -> None:
     """Delete an agent."""
-    try:
-        project = resolve_project(project)
-    except ConfigurationError as e:
-        console.print(f"[red]Error: {escape(str(e))}[/red]")
-        raise typer.Exit(code=1)
-
     if not yes:
         confirm = typer.confirm(f"Are you sure you want to delete agent '{agent_id}'?")
         if not confirm:
             console.print("Aborted.")
             raise typer.Exit()
 
+    client = get_ready_client()
     try:
-        client = get_client(project=project, location=location, base_url=base_url, api_version=api_version)
         client.delete_agent(agent_id, force=force)
         console.print(f"[red]Agent '{escape(agent_id)}' deleted.[/red]")
     except Exception as e:
@@ -313,20 +325,10 @@ app.add_typer(sessions_app, name="sessions")
 @sessions_app.command("list")
 def list_sessions(
     agent_id: Annotated[str, typer.Argument(help="Agent ID or full resource name")],
-    location: Annotated[str, typer.Option("--location", "-l", help="Google Cloud region")],
-    project: Annotated[str | None, typer.Option("--project", "-p", help="Google Cloud project ID (defaults to ADC project)")] = None,
-    base_url: Annotated[str | None, typer.Option("--base-url", help="Override the Vertex AI base URL")] = None,
-    api_version: Annotated[str | None, typer.Option("--api-version", help="Override the API version")] = None,
 ) -> None:
     """List all sessions for an agent."""
+    client = get_ready_client()
     try:
-        project = resolve_project(project)
-    except ConfigurationError as e:
-        console.print(f"[red]Error: {escape(str(e))}[/red]")
-        raise typer.Exit(code=1)
-
-    try:
-        client = get_client(project=project, location=location, base_url=base_url, api_version=api_version)
         sessions = list(client.list_sessions(agent_id))
 
         if not sessions:
@@ -341,10 +343,7 @@ def list_sessions(
         table.add_column("Expires")
 
         for session in sessions:
-            # Extract session ID from full resource name
-            session_name = getattr(session, "name", "") or ""
-            session_id = session_name.split("/")[-1] if session_name else ""
-
+            session_id = get_id(session)
             display_name = getattr(session, "display_name", "") or ""
             user_id = getattr(session, "user_id", "") or ""
 
@@ -383,20 +382,10 @@ app.add_typer(sandboxes_app, name="sandboxes")
 @sandboxes_app.command("list")
 def list_sandboxes(
     agent_id: Annotated[str, typer.Argument(help="Agent ID or full resource name")],
-    location: Annotated[str, typer.Option("--location", "-l", help="Google Cloud region")],
-    project: Annotated[str | None, typer.Option("--project", "-p", help="Google Cloud project ID (defaults to ADC project)")] = None,
-    base_url: Annotated[str | None, typer.Option("--base-url", help="Override the Vertex AI base URL")] = None,
-    api_version: Annotated[str | None, typer.Option("--api-version", help="Override the API version")] = None,
 ) -> None:
     """List all sandboxes for an agent."""
+    client = get_ready_client()
     try:
-        project = resolve_project(project)
-    except ConfigurationError as e:
-        console.print(f"[red]Error: {escape(str(e))}[/red]")
-        raise typer.Exit(code=1)
-
-    try:
-        client = get_client(project=project, location=location, base_url=base_url, api_version=api_version)
         sandboxes = list(client.list_sandboxes(agent_id))
 
         if not sandboxes:
@@ -411,10 +400,7 @@ def list_sandboxes(
         table.add_column("Expires")
 
         for sandbox in sandboxes:
-            # Extract sandbox ID from full resource name
-            sandbox_name = getattr(sandbox, "name", "") or ""
-            sandbox_id = sandbox_name.split("/")[-1] if sandbox_name else ""
-
+            sandbox_id = get_id(sandbox)
             display_name = getattr(sandbox, "display_name", "") or ""
 
             # Format state (remove STATE_ prefix if present)
@@ -459,20 +445,10 @@ app.add_typer(memories_app, name="memories")
 @memories_app.command("list")
 def list_memories(
     agent_id: Annotated[str, typer.Argument(help="Agent ID or full resource name")],
-    location: Annotated[str, typer.Option("--location", "-l", help="Google Cloud region")],
-    project: Annotated[str | None, typer.Option("--project", "-p", help="Google Cloud project ID (defaults to ADC project)")] = None,
-    base_url: Annotated[str | None, typer.Option("--base-url", help="Override the Vertex AI base URL")] = None,
-    api_version: Annotated[str | None, typer.Option("--api-version", help="Override the API version")] = None,
 ) -> None:
     """List all memories for an agent."""
+    client = get_ready_client()
     try:
-        project = resolve_project(project)
-    except ConfigurationError as e:
-        console.print(f"[red]Error: {escape(str(e))}[/red]")
-        raise typer.Exit(code=1)
-
-    try:
-        client = get_client(project=project, location=location, base_url=base_url, api_version=api_version)
         memories = list(client.list_memories(agent_id))
 
         table = Table(title="Memories")
@@ -486,10 +462,7 @@ def list_memories(
         has_items = False
         for memory in memories:
             has_items = True
-            # Extract memory ID from full resource name
-            memory_name = getattr(memory, "name", "") or ""
-            memory_id = memory_name.split("/")[-1] if memory_name else ""
-
+            memory_id = get_id(memory)
             display_name = getattr(memory, "display_name", "") or ""
             fact = getattr(memory, "fact", "") or ""
 
@@ -535,33 +508,28 @@ def list_memories(
 @app.command("chat")
 def chat(
     agent_id: Annotated[str, typer.Argument(help="Agent ID or full resource name")],
-    location: Annotated[str, typer.Option("--location", "-l", help="Google Cloud region")],
-    project: Annotated[str | None, typer.Option("--project", "-p", help="Google Cloud project ID (defaults to ADC project)")] = None,
     user: Annotated[str, typer.Option("--user", "-u", help="User ID for the chat session")] = "cli-user",
     debug: Annotated[bool, typer.Option("--debug", "-d", help="Enable verbose HTTP debug logging")] = False,
-    base_url: Annotated[str | None, typer.Option("--base-url", help="Override the Vertex AI base URL")] = None,
-    api_version: Annotated[str | None, typer.Option("--api-version", help="Override the API version")] = None,
 ) -> None:
     """Start an interactive chat session with an agent."""
-    try:
-        project = resolve_project(project)
-    except ConfigurationError as e:
-        console.print(f"[red]Error: {escape(str(e))}[/red]")
+    if not state.location:
+        console.print("[red]Error: Location is required. Use --location or set it globally.[/red]")
         raise typer.Exit(code=1)
 
     try:
+        project = resolve_project(state.project)
         asyncio.run(run_chat(
             project=project,
-            location=location,
+            location=state.location,
             agent_id=agent_id,
             user_id=user,
             debug=debug,
-            base_url=base_url,
-            api_version=api_version,
+            base_url=state.base_url,
+            api_version=state.api_version,
         ))
     except KeyboardInterrupt:
         console.print("\n[yellow]Chat session ended.[/yellow]")
-    except Exception as e:
+    except (ConfigurationError, Exception) as e:
         console.print(f"[red]Error in chat session: {escape(str(e))}[/red]")
         raise typer.Exit(code=1)
 

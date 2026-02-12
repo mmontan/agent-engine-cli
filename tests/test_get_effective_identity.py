@@ -30,7 +30,7 @@ def test_get_agent_shows_effective_identity(mock_get_client):
     mock_get_client.return_value = mock_client
 
     result = runner.invoke(
-        app, ["get", "agent1", "--project", "test-project", "--location", "us-central1"]
+        app, ["--project", "test-project", "--location", "us-central1", "get", "agent1"]
     )
     
     print(result.stdout)

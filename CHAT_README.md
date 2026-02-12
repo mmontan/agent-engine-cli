@@ -13,7 +13,7 @@ Interactive command-line client for chatting with your deployed agent on Vertex 
 ## Quick Start
 
 ```bash
-ae chat AGENT_ID -p PROJECT_ID -l us-central1
+ae -p PROJECT_ID -l us-central1 chat AGENT_ID
 ```
 
 ## Command-Line Options
@@ -29,31 +29,35 @@ Arguments:
   AGENT_ID  Agent ID or full resource name [required]
 
 Options:
-  -p, --project TEXT    Google Cloud project ID [required]
-  -l, --location TEXT   Google Cloud region [required]
   -u, --user TEXT       User ID for the chat session [default: cli-user]
   -d, --debug           Enable verbose HTTP debug logging
   --help                Show this message and exit.
+
+Global Options (can be placed before 'chat'):
+  -p, --project TEXT    Google Cloud project ID
+  -l, --location TEXT   Google Cloud region
+  --base-url TEXT       Override the Vertex AI base URL
+  --api-version TEXT    Override the API version
 ```
 
 ## Usage Examples
 
 ```bash
 # Basic chat session
-ae chat 172357243746910208 -p my-project -l us-central1
+ae -p my-project -l us-central1 chat 172357243746910208
 
 # With custom user ID
-ae chat 172357243746910208 -p my-project -l us-central1 --user john@example.com
+ae -p my-project -l us-central1 chat 172357243746910208 --user john@example.com
 
 # With debug logging to see HTTP requests/responses
-ae chat 172357243746910208 -p my-project -l us-central1 --debug
+ae -p my-project -l us-central1 chat 172357243746910208 --debug
 ```
 
 ## Interactive Session
 
 1. **Start the client:**
    ```bash
-   ae chat AGENT_ID -p PROJECT_ID -l LOCATION
+   ae -p PROJECT_ID -l LOCATION chat AGENT_ID
    ```
 
 2. **Chat with your agent:**
@@ -99,9 +103,9 @@ Chat session ended.
 
 **Error: "Error in chat session: ..."**
 - Check your GCP credentials: `gcloud auth application-default login`
-- Verify agent is deployed: `ae list -p PROJECT_ID -l LOCATION`
+- Verify agent is deployed: `ae -p PROJECT_ID -l LOCATION list`
 - Ensure the agent ID is correct
 
 **No response from agent:**
 - Check your network connection
-- Verify agent is running: `ae get AGENT_ID -p PROJECT_ID -l LOCATION`
+- Verify agent is running: `ae -p PROJECT_ID -l LOCATION get AGENT_ID`

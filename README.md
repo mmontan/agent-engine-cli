@@ -49,13 +49,13 @@ Start an interactive chat session with a deployed agent:
 
 ```bash
 # Basic usage
-ae chat AGENT_ID -p PROJECT_ID -l us-central1
+ae -p PROJECT_ID -l us-central1 chat AGENT_ID
 
 # With custom user ID
-ae chat AGENT_ID -p PROJECT_ID -l us-central1 --user my-user-id
+ae -p PROJECT_ID -l us-central1 chat AGENT_ID --user my-user-id
 
 # With debug logging enabled
-ae chat AGENT_ID -p PROJECT_ID -l us-central1 --debug
+ae -p PROJECT_ID -l us-central1 chat AGENT_ID --debug
 ```
 
 ## Development
