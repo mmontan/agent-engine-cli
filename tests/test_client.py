@@ -50,6 +50,60 @@ class TestAgentEngineClient:
 
         assert client.location == "europe-west1"
 
+    def test_init_default_http_options(self, mock_vertexai, mock_agent_engines, mock_types):
+        """Test that default init passes no http_options."""
+        AgentEngineClient(project="test-project", location="us-central1")
+
+        mock_vertexai.Client.assert_called_once_with(
+            project="test-project",
+            location="us-central1",
+            http_options=None,
+        )
+
+    def test_init_custom_api_version(self, mock_vertexai, mock_agent_engines, mock_types):
+        """Test that custom api_version is passed through in http_options."""
+        AgentEngineClient(project="test-project", location="us-central1", api_version="v1beta1")
+
+        mock_vertexai.Client.assert_called_once_with(
+            project="test-project",
+            location="us-central1",
+            http_options={"api_version": "v1beta1"},
+        )
+
+    def test_init_custom_base_url(self, mock_vertexai, mock_agent_engines, mock_types):
+        """Test that custom base_url is passed through in http_options."""
+        AgentEngineClient(
+            project="test-project",
+            location="us-central1",
+            base_url="https://custom-endpoint.example.com",
+        )
+
+        mock_vertexai.Client.assert_called_once_with(
+            project="test-project",
+            location="us-central1",
+            http_options={
+                "base_url": "https://custom-endpoint.example.com",
+            },
+        )
+
+    def test_init_custom_base_url_and_api_version(self, mock_vertexai, mock_agent_engines, mock_types):
+        """Test that both base_url and api_version are passed through together."""
+        AgentEngineClient(
+            project="test-project",
+            location="us-central1",
+            base_url="https://staging.example.com",
+            api_version="v1",
+        )
+
+        mock_vertexai.Client.assert_called_once_with(
+            project="test-project",
+            location="us-central1",
+            http_options={
+                "api_version": "v1",
+                "base_url": "https://staging.example.com",
+            },
+        )
+
     def test_list_agents(self, mock_vertexai, mock_agent_engines, mock_types):
         """Test listing agents."""
         mock_api_resource1 = MagicMock()

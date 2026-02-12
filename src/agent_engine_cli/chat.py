@@ -119,6 +119,8 @@ async def run_chat(
     agent_id: str,
     user_id: str = "cli-user",
     debug: bool = False,
+    base_url: str | None = None,
+    api_version: str | None = None,
 ) -> None:
     """
     Run an interactive chat session with an Agent Engine instance.
@@ -129,6 +131,8 @@ async def run_chat(
         agent_id: Agent ID or full resource name.
         user_id: User ID for the chat session.
         debug: Enable verbose HTTP debug logging.
+        base_url: Optional override for the Vertex AI base URL.
+        api_version: Optional API version override.
     """
     # Suppress vertexai experimental warnings
     try:
@@ -149,7 +153,12 @@ async def run_chat(
     import vertexai
 
     # Get agent instance
-    client = vertexai.Client(project=project, location=location)
+    http_options: dict[str, str] = {}
+    if api_version:
+        http_options["api_version"] = api_version
+    if base_url:
+        http_options["base_url"] = base_url
+    client = vertexai.Client(project=project, location=location, http_options=http_options or None)
     resource_name = (
         f"projects/{project}/locations/{location}/reasoningEngines/{agent_id}"
     )

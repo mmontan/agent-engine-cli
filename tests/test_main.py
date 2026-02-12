@@ -3,6 +3,7 @@
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from typer.testing import CliRunner
 from google.cloud.aiplatform_v1beta1.types import ReasoningEngine, ReasoningEngineSpec, Session, Memory
 
@@ -283,6 +284,8 @@ class TestChatCommand:
             agent_id="agent123",
             user_id="cli-user",
             debug=False,
+            base_url=None,
+            api_version=None,
         )
 
     @patch("agent_engine_cli.main.run_chat")
@@ -302,6 +305,8 @@ class TestChatCommand:
             agent_id="agent123",
             user_id="my-user",
             debug=True,
+            base_url=None,
+            api_version=None,
         )
 
     @patch("agent_engine_cli.main.run_chat")
@@ -331,7 +336,7 @@ class TestADCFallback:
         result = runner.invoke(app, ["list", "--location", "us-central1"])
         assert result.exit_code == 0
         mock_resolve.assert_called_once_with(None)
-        mock_get_client.assert_called_once_with(project="adc-project", location="us-central1")
+        mock_get_client.assert_called_once_with(project="adc-project", location="us-central1", base_url=None, api_version=None)
 
     @patch("agent_engine_cli.main.resolve_project")
     def test_list_error_when_no_project(self, mock_resolve):
@@ -400,6 +405,8 @@ class TestADCFallback:
             agent_id="agent1",
             user_id="cli-user",
             debug=False,
+            base_url=None,
+            api_version=None,
         )
 
     @patch("agent_engine_cli.main.get_client")
@@ -489,7 +496,7 @@ class TestSessionsListCommand:
         result = runner.invoke(app, ["sessions", "list", "agent1", "--location", "us-central1"])
         assert result.exit_code == 0
         mock_resolve.assert_called_once_with(None)
-        mock_get_client.assert_called_once_with(project="adc-project", location="us-central1")
+        mock_get_client.assert_called_once_with(project="adc-project", location="us-central1", base_url=None, api_version=None)
 
 
 class TestSandboxesListCommand:
@@ -568,7 +575,7 @@ class TestSandboxesListCommand:
         result = runner.invoke(app, ["sandboxes", "list", "agent1", "--location", "us-central1"])
         assert result.exit_code == 0
         mock_resolve.assert_called_once_with(None)
-        mock_get_client.assert_called_once_with(project="adc-project", location="us-central1")
+        mock_get_client.assert_called_once_with(project="adc-project", location="us-central1", base_url=None, api_version=None)
 
 
 class TestMemoriesListCommand:
@@ -648,4 +655,65 @@ class TestMemoriesListCommand:
         result = runner.invoke(app, ["memories", "list", "agent1", "--location", "us-central1"])
         assert result.exit_code == 0
         mock_resolve.assert_called_once_with(None)
-        mock_get_client.assert_called_once_with(project="adc-project", location="us-central1")
+        mock_get_client.assert_called_once_with(project="adc-project", location="us-central1", base_url=None, api_version=None)
+
+
+class TestEndpointOverrideOptions:
+    """Tests for --base-url and --api-version options."""
+
+    @pytest.mark.parametrize("command,args", [
+        (["list"], []),
+        (["get"], ["agent1"]),
+        (["create"], ["My Agent"]),
+        (["delete"], ["agent1"]),
+        (["chat"], ["agent1"]),
+        (["sessions", "list"], ["agent1"]),
+        (["sandboxes", "list"], ["agent1"]),
+        (["memories", "list"], ["agent1"]),
+    ])
+    def test_help_shows_base_url_and_api_version(self, command, args):
+        """Test that --base-url and --api-version appear in help for all commands."""
+        result = runner.invoke(app, command + args[:0] + ["--help"])
+        assert result.exit_code == 0
+        assert "--base-url" in result.stdout
+        assert "--api-version" in result.stdout
+
+    @patch("agent_engine_cli.main.get_client")
+    def test_list_with_custom_endpoint_options(self, mock_get_client):
+        """Test list command passes custom base_url and api_version."""
+        fake_client = FakeAgentEngineClient(project="test-project", location="us-central1")
+        mock_get_client.return_value = fake_client
+
+        result = runner.invoke(app, [
+            "list", "--project", "test-project", "--location", "us-central1",
+            "--base-url", "https://custom.example.com",
+            "--api-version", "v1",
+        ])
+        assert result.exit_code == 0
+        mock_get_client.assert_called_once_with(
+            project="test-project",
+            location="us-central1",
+            base_url="https://custom.example.com",
+            api_version="v1",
+        )
+
+    @patch("agent_engine_cli.main.run_chat")
+    def test_chat_with_custom_endpoint_options(self, mock_run_chat):
+        """Test chat command passes custom base_url and api_version to run_chat."""
+        mock_run_chat.return_value = AsyncMock()()
+
+        result = runner.invoke(app, [
+            "chat", "agent123", "--project", "test-project", "--location", "us-central1",
+            "--base-url", "https://staging.example.com",
+            "--api-version", "v1",
+        ])
+        assert result.exit_code == 0
+        mock_run_chat.assert_called_once_with(
+            project="test-project",
+            location="us-central1",
+            agent_id="agent123",
+            user_id="cli-user",
+            debug=False,
+            base_url="https://staging.example.com",
+            api_version="v1",
+        )

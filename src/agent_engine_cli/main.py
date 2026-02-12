@@ -33,6 +33,8 @@ def version():
 def list_agents(
     location: Annotated[str, typer.Option("--location", "-l", help="Google Cloud region")],
     project: Annotated[str | None, typer.Option("--project", "-p", help="Google Cloud project ID (defaults to ADC project)")] = None,
+    base_url: Annotated[str | None, typer.Option("--base-url", help="Override the Vertex AI base URL")] = None,
+    api_version: Annotated[str | None, typer.Option("--api-version", help="Override the API version")] = None,
 ) -> None:
     """List all agents in the project."""
     try:
@@ -42,7 +44,7 @@ def list_agents(
         raise typer.Exit(code=1)
 
     try:
-        client = get_client(project=project, location=location)
+        client = get_client(project=project, location=location, base_url=base_url, api_version=api_version)
         agents = list(client.list_agents())
 
         if not agents:
@@ -99,6 +101,8 @@ def get_agent(
     location: Annotated[str, typer.Option("--location", "-l", help="Google Cloud region")],
     project: Annotated[str | None, typer.Option("--project", "-p", help="Google Cloud project ID (defaults to ADC project)")] = None,
     full: Annotated[bool, typer.Option("--full", "-f", help="Show full JSON output")] = False,
+    base_url: Annotated[str | None, typer.Option("--base-url", help="Override the Vertex AI base URL")] = None,
+    api_version: Annotated[str | None, typer.Option("--api-version", help="Override the API version")] = None,
 ) -> None:
     """Get details for a specific agent."""
     try:
@@ -108,7 +112,7 @@ def get_agent(
         raise typer.Exit(code=1)
 
     try:
-        client = get_client(project=project, location=location)
+        client = get_client(project=project, location=location, base_url=base_url, api_version=api_version)
         agent = client.get_agent(agent_id)
 
         # v1beta1 api_resource uses 'name' instead of 'resource_name'
@@ -239,6 +243,8 @@ def create_agent(
         str | None,
         typer.Option("--service-account", "-s", help="Service account email (only used with --identity service_account)"),
     ] = None,
+    base_url: Annotated[str | None, typer.Option("--base-url", help="Override the Vertex AI base URL")] = None,
+    api_version: Annotated[str | None, typer.Option("--api-version", help="Override the API version")] = None,
 ) -> None:
     """Create a new agent (without deploying code)."""
     try:
@@ -248,7 +254,7 @@ def create_agent(
         raise typer.Exit(code=1)
 
     try:
-        client = get_client(project=project, location=location)
+        client = get_client(project=project, location=location, base_url=base_url, api_version=api_version)
         console.print(f"Creating agent '{escape(display_name)}'...")
 
         agent = client.create_agent(
@@ -274,6 +280,8 @@ def delete_agent(
     project: Annotated[str | None, typer.Option("--project", "-p", help="Google Cloud project ID (defaults to ADC project)")] = None,
     force: Annotated[bool, typer.Option("--force", "-f", help="Force deletion of agents with sessions/memory")] = False,
     yes: Annotated[bool, typer.Option("--yes", "-y", help="Skip confirmation prompt")] = False,
+    base_url: Annotated[str | None, typer.Option("--base-url", help="Override the Vertex AI base URL")] = None,
+    api_version: Annotated[str | None, typer.Option("--api-version", help="Override the API version")] = None,
 ) -> None:
     """Delete an agent."""
     try:
@@ -289,7 +297,7 @@ def delete_agent(
             raise typer.Exit()
 
     try:
-        client = get_client(project=project, location=location)
+        client = get_client(project=project, location=location, base_url=base_url, api_version=api_version)
         client.delete_agent(agent_id, force=force)
         console.print(f"[red]Agent '{escape(agent_id)}' deleted.[/red]")
     except Exception as e:
@@ -307,6 +315,8 @@ def list_sessions(
     agent_id: Annotated[str, typer.Argument(help="Agent ID or full resource name")],
     location: Annotated[str, typer.Option("--location", "-l", help="Google Cloud region")],
     project: Annotated[str | None, typer.Option("--project", "-p", help="Google Cloud project ID (defaults to ADC project)")] = None,
+    base_url: Annotated[str | None, typer.Option("--base-url", help="Override the Vertex AI base URL")] = None,
+    api_version: Annotated[str | None, typer.Option("--api-version", help="Override the API version")] = None,
 ) -> None:
     """List all sessions for an agent."""
     try:
@@ -316,7 +326,7 @@ def list_sessions(
         raise typer.Exit(code=1)
 
     try:
-        client = get_client(project=project, location=location)
+        client = get_client(project=project, location=location, base_url=base_url, api_version=api_version)
         sessions = list(client.list_sessions(agent_id))
 
         if not sessions:
@@ -375,6 +385,8 @@ def list_sandboxes(
     agent_id: Annotated[str, typer.Argument(help="Agent ID or full resource name")],
     location: Annotated[str, typer.Option("--location", "-l", help="Google Cloud region")],
     project: Annotated[str | None, typer.Option("--project", "-p", help="Google Cloud project ID (defaults to ADC project)")] = None,
+    base_url: Annotated[str | None, typer.Option("--base-url", help="Override the Vertex AI base URL")] = None,
+    api_version: Annotated[str | None, typer.Option("--api-version", help="Override the API version")] = None,
 ) -> None:
     """List all sandboxes for an agent."""
     try:
@@ -384,7 +396,7 @@ def list_sandboxes(
         raise typer.Exit(code=1)
 
     try:
-        client = get_client(project=project, location=location)
+        client = get_client(project=project, location=location, base_url=base_url, api_version=api_version)
         sandboxes = list(client.list_sandboxes(agent_id))
 
         if not sandboxes:
@@ -449,6 +461,8 @@ def list_memories(
     agent_id: Annotated[str, typer.Argument(help="Agent ID or full resource name")],
     location: Annotated[str, typer.Option("--location", "-l", help="Google Cloud region")],
     project: Annotated[str | None, typer.Option("--project", "-p", help="Google Cloud project ID (defaults to ADC project)")] = None,
+    base_url: Annotated[str | None, typer.Option("--base-url", help="Override the Vertex AI base URL")] = None,
+    api_version: Annotated[str | None, typer.Option("--api-version", help="Override the API version")] = None,
 ) -> None:
     """List all memories for an agent."""
     try:
@@ -458,7 +472,7 @@ def list_memories(
         raise typer.Exit(code=1)
 
     try:
-        client = get_client(project=project, location=location)
+        client = get_client(project=project, location=location, base_url=base_url, api_version=api_version)
         memories = list(client.list_memories(agent_id))
 
         table = Table(title="Memories")
@@ -525,6 +539,8 @@ def chat(
     project: Annotated[str | None, typer.Option("--project", "-p", help="Google Cloud project ID (defaults to ADC project)")] = None,
     user: Annotated[str, typer.Option("--user", "-u", help="User ID for the chat session")] = "cli-user",
     debug: Annotated[bool, typer.Option("--debug", "-d", help="Enable verbose HTTP debug logging")] = False,
+    base_url: Annotated[str | None, typer.Option("--base-url", help="Override the Vertex AI base URL")] = None,
+    api_version: Annotated[str | None, typer.Option("--api-version", help="Override the API version")] = None,
 ) -> None:
     """Start an interactive chat session with an agent."""
     try:
@@ -540,6 +556,8 @@ def chat(
             agent_id=agent_id,
             user_id=user,
             debug=debug,
+            base_url=base_url,
+            api_version=api_version,
         ))
     except KeyboardInterrupt:
         console.print("\n[yellow]Chat session ended.[/yellow]")

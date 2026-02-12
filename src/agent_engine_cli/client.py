@@ -24,12 +24,14 @@ class AgentResource(Protocol):
 class AgentEngineClient:
     """Client for interacting with Vertex AI Agent Engine."""
 
-    def __init__(self, project: str, location: str):
+    def __init__(self, project: str, location: str, *, base_url: str | None = None, api_version: str | None = None):
         """Initialize the client with project and location.
 
         Args:
             project: Google Cloud project ID
             location: Google Cloud region
+            base_url: Optional override for the Vertex AI base URL
+            api_version: Optional API version override
         """
         self.project = project
         self.location = location
@@ -38,10 +40,16 @@ class AgentEngineClient:
 
         vertexai.init(project=project, location=location)
 
+        http_options: dict[str, str] = {}
+        if api_version:
+            http_options["api_version"] = api_version
+        if base_url:
+            http_options["base_url"] = base_url
+
         self._client = vertexai.Client(
             project=project,
             location=location,
-            http_options={"api_version": "v1beta1"},
+            http_options=http_options or None,
         )
 
     def _resolve_resource_name(self, agent_id: str) -> str:
