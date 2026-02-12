@@ -16,7 +16,7 @@ runner = CliRunner(env={"COLUMNS": "200", "NO_COLOR": "1", "TERM": "dumb"})
 def test_version():
     result = runner.invoke(app, ["version"])
     assert result.exit_code == 0
-    assert "Agent Engine CLI v0.1.5" in result.stdout
+    assert "Agent Engine CLI v0.1.6" in result.stdout
 
 
 def test_global_options_in_help():
