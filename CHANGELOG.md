@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.5] - 2026-02-11
+
+### Added
+
+- New `--base-url` and `--api-version` options to `ae` for Vertex AI endpoint overrides.
+
+### Performance
+
+- Prevented uncontrolled monkey patching in the chat client.
+
+### Documentation
+
+- Expanded `CLAUDE.md` with detailed architecture and testing patterns.
+- Updated installation instructions to specify Python 3.11+.
+
+### Internal
+
+- Refactored CRUD operations to use dependency injection and Fakes for improved testing.
+- Cleaned up test fakes and strengthened assertions.
+
 ## [0.1.4] - 2026-02-10
 
 ### Security
