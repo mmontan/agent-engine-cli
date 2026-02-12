@@ -1,9 +1,8 @@
 """Tests for CLI commands."""
 
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
-import pytest
 from typer.testing import CliRunner
 from google.cloud.aiplatform_v1beta1.types import ReasoningEngine, ReasoningEngineSpec, Session, Memory
 
@@ -20,15 +19,17 @@ def test_version():
     assert "Agent Engine CLI v0.1.5" in result.stdout
 
 
+def test_global_options_in_help():
+    """Test that global options appear in the main help."""
+    result = runner.invoke(app, ["--help"])
+    assert result.exit_code == 0
+    assert "--project" in result.stdout
+    assert "--location" in result.stdout
+    assert "--base-url" in result.stdout
+    assert "--api-version" in result.stdout
+
+
 class TestListCommand:
-    def test_list_help(self):
-        """Test list command help."""
-        # Options are now global, so they don't show up in 'list --help' specifically
-        # but rather in the main help. However, we can check the main help.
-        result = runner.invoke(app, ["--help"])
-        assert result.exit_code == 0
-        assert "--project" in result.stdout
-        assert "--location" in result.stdout
 
     @patch("agent_engine_cli.main.get_client")
     def test_list_no_agents(self, mock_get_client):
@@ -62,15 +63,9 @@ class TestListCommand:
 class TestGetCommand:
     def test_get_help(self):
         """Test get command help."""
-        # --project and --location are global, --full is local
         result = runner.invoke(app, ["get", "--help"])
         assert result.exit_code == 0
         assert "--full" in result.stdout
-        
-        # Check global help for project/location
-        result = runner.invoke(app, ["--help"])
-        assert "--project" in result.stdout
-        assert "--location" in result.stdout
 
     @patch("agent_engine_cli.main.get_client")
     def test_get_agent(self, mock_get_client):
@@ -108,14 +103,9 @@ class TestGetCommand:
 class TestCreateCommand:
     def test_create_help(self):
         """Test create command help."""
-        # Options are now global
         result = runner.invoke(app, ["create", "--help"])
         assert result.exit_code == 0
         assert "--identity" in result.stdout
-        
-        result = runner.invoke(app, ["--help"])
-        assert "--project" in result.stdout
-        assert "--location" in result.stdout
 
     @patch("agent_engine_cli.main.get_client")
     def test_create_agent(self, mock_get_client):
@@ -180,40 +170,8 @@ class TestDeleteCommand:
         """Test delete command help."""
         result = runner.invoke(app, ["delete", "--help"])
         assert result.exit_code == 0
-        assert "--project" in result.stdout
-        assert "--location" in result.stdout
         assert "--force" in result.stdout
         assert "--yes" in result.stdout
-
-    @patch("agent_engine_cli.main.get_client")
-    def test_delete_agent_with_confirmation(self, mock_get_client):
-        """Test delete command with confirmation prompt."""
-        fake_client = FakeAgentEngineClient(project="test-project", location="us-central1")
-        mock_get_client.return_value = fake_client
-
-        agent_name = "projects/test-project/locations/us-central1/reasoningEngines/agent123"
-        fake_client._agents[agent_name] = ReasoningEngine(name=agent_name)
-
-        result = runner.invoke(
-            app,
-            ["delete", "agent123", "--project", "test-project", "--location", "us-central1"],
-            input="y\n",
-        )
-        assert result.exit_code == 0
-        assert "deleted" in result.stdout
-        assert agent_name not in fake_client._agents
-
-class TestDeleteCommand:
-    def test_delete_help(self):
-        """Test delete command help."""
-        result = runner.invoke(app, ["delete", "--help"])
-        assert result.exit_code == 0
-        assert "--force" in result.stdout
-        assert "--yes" in result.stdout
-        
-        result = runner.invoke(app, ["--help"])
-        assert "--project" in result.stdout
-        assert "--location" in result.stdout
 
     @patch("agent_engine_cli.main.get_client")
     def test_delete_agent_with_confirmation(self, mock_get_client):
@@ -306,10 +264,6 @@ class TestChatCommand:
         assert result.exit_code == 0
         assert "--user" in result.stdout
         assert "--debug" in result.stdout
-        
-        result = runner.invoke(app, ["--help"])
-        assert "--project" in result.stdout
-        assert "--location" in result.stdout
 
     @patch("agent_engine_cli.main.run_chat")
     def test_chat_invokes_run_chat(self, mock_run_chat):
@@ -466,10 +420,6 @@ class TestSessionsListCommand:
         result = runner.invoke(app, ["sessions", "list", "--help"])
         assert result.exit_code == 0
         assert "AGENT_ID" in result.stdout
-        
-        result = runner.invoke(app, ["--help"])
-        assert "--project" in result.stdout
-        assert "--location" in result.stdout
 
     @patch("agent_engine_cli.main.get_client")
     def test_sessions_list_no_sessions(self, mock_get_client):
@@ -545,10 +495,6 @@ class TestSandboxesListCommand:
         result = runner.invoke(app, ["sandboxes", "list", "--help"])
         assert result.exit_code == 0
         assert "AGENT_ID" in result.stdout
-        
-        result = runner.invoke(app, ["--help"])
-        assert "--project" in result.stdout
-        assert "--location" in result.stdout
 
     @patch("agent_engine_cli.main.get_client")
     def test_sandboxes_list_no_sandboxes(self, mock_get_client):
@@ -626,10 +572,6 @@ class TestMemoriesListCommand:
         result = runner.invoke(app, ["memories", "list", "--help"])
         assert result.exit_code == 0
         assert "AGENT_ID" in result.stdout
-        
-        result = runner.invoke(app, ["--help"])
-        assert "--project" in result.stdout
-        assert "--location" in result.stdout
 
     @patch("agent_engine_cli.main.get_client")
     def test_memories_list_no_memories(self, mock_get_client):
@@ -705,23 +647,6 @@ class TestMemoriesListCommand:
 class TestEndpointOverrideOptions:
     """Tests for --base-url and --api-version options."""
 
-    @pytest.mark.parametrize("command,args", [
-        (["list"], []),
-        (["get"], ["agent1"]),
-        (["create"], ["My Agent"]),
-        (["delete"], ["agent1"]),
-        (["chat"], ["agent1"]),
-        (["sessions", "list"], ["agent1"]),
-        (["sandboxes", "list"], ["agent1"]),
-        (["memories", "list"], ["agent1"]),
-    ])
-    def test_help_shows_base_url_and_api_version(self, command, args):
-        """Test that --base-url and --api-version appear in help for all commands."""
-        # Check global help
-        result = runner.invoke(app, ["--help"])
-        assert result.exit_code == 0
-        assert "--base-url" in result.stdout
-        assert "--api-version" in result.stdout
 
     @patch("agent_engine_cli.main.get_client")
     def test_list_with_custom_endpoint_options(self, mock_get_client):

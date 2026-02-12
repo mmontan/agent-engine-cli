@@ -12,7 +12,7 @@ from rich.table import Table
 
 from agent_engine_cli import __version__
 from agent_engine_cli.chat import run_chat
-from agent_engine_cli.config import ConfigurationError, resolve_project
+from agent_engine_cli.config import resolve_project
 from agent_engine_cli.dependencies import get_client
 
 console = Console()
@@ -29,26 +29,33 @@ class State:
 state = State()
 
 
-def get_ready_client():
-    """Helper to resolve project and return an initialized client."""
+def _resolve_config() -> tuple[str, str]:
+    """Validate location and resolve project, returning (project, location)."""
     if not state.location:
         console.print("[red]Error: Location is required. Use --location or set it globally.[/red]")
         raise typer.Exit(code=1)
 
     try:
         project = resolve_project(state.project)
-        return get_client(
-            project=project,
-            location=state.location,
-            base_url=state.base_url,
-            api_version=state.api_version,
-        )
-    except (ConfigurationError, Exception) as e:
+    except Exception as e:
         console.print(f"[red]Error: {escape(str(e))}[/red]")
         raise typer.Exit(code=1)
 
+    return project, state.location
 
-def get_id(resource: any) -> str:
+
+def get_ready_client():
+    """Helper to resolve project and return an initialized client."""
+    project, location = _resolve_config()
+    return get_client(
+        project=project,
+        location=location,
+        base_url=state.base_url,
+        api_version=state.api_version,
+    )
+
+
+def get_id(resource: object) -> str:
     """Extract ID from a resource name string or object."""
     name = resource if isinstance(resource, str) else (getattr(resource, "name", None) or getattr(resource, "resource_name", ""))
     return name.split("/")[-1] if name else ""
@@ -512,15 +519,12 @@ def chat(
     debug: Annotated[bool, typer.Option("--debug", "-d", help="Enable verbose HTTP debug logging")] = False,
 ) -> None:
     """Start an interactive chat session with an agent."""
-    if not state.location:
-        console.print("[red]Error: Location is required. Use --location or set it globally.[/red]")
-        raise typer.Exit(code=1)
+    project, location = _resolve_config()
 
     try:
-        project = resolve_project(state.project)
         asyncio.run(run_chat(
             project=project,
-            location=state.location,
+            location=location,
             agent_id=agent_id,
             user_id=user,
             debug=debug,
@@ -529,7 +533,7 @@ def chat(
         ))
     except KeyboardInterrupt:
         console.print("\n[yellow]Chat session ended.[/yellow]")
-    except (ConfigurationError, Exception) as e:
+    except Exception as e:
         console.print(f"[red]Error in chat session: {escape(str(e))}[/red]")
         raise typer.Exit(code=1)
 
