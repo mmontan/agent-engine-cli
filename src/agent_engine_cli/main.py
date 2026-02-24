@@ -336,11 +336,7 @@ def list_sessions(
     """List all sessions for an agent."""
     client = get_ready_client()
     try:
-        sessions = list(client.list_sessions(agent_id))
-
-        if not sessions:
-            console.print("No sessions found.")
-            return
+        sessions = client.list_sessions(agent_id)
 
         table = Table(title="Sessions")
         table.add_column("Session ID", style="cyan")
@@ -349,7 +345,9 @@ def list_sessions(
         table.add_column("Created")
         table.add_column("Expires")
 
+        has_sessions = False
         for session in sessions:
+            has_sessions = True
             session_id = get_id(session)
             display_name = getattr(session, "display_name", "") or ""
             user_id = getattr(session, "user_id", "") or ""
@@ -374,6 +372,10 @@ def list_sessions(
                 create_time,
                 expire_time,
             )
+
+        if not has_sessions:
+            console.print("No sessions found.")
+            return
 
         console.print(table)
     except Exception as e:
