@@ -644,6 +644,98 @@ class TestMemoriesListCommand:
         mock_get_client.assert_called_once_with(project="adc-project", location="us-central1", base_url=None, api_version=None)
 
 
+class TestA2AChatCommand:
+    def test_a2a_chat_help(self):
+        """Test a2a-chat command help."""
+        result = runner.invoke(app, ["a2a-chat", "--help"])
+        assert result.exit_code == 0
+        assert "--debug" in result.stdout
+        assert "AGENT_ID" in result.stdout
+
+    @patch("agent_engine_cli.main.run_a2a_chat")
+    def test_a2a_chat_invokes_run_a2a_chat(self, mock_run_a2a_chat):
+        """Test a2a-chat command invokes run_a2a_chat with correct arguments."""
+        result = runner.invoke(
+            app,
+            ["--project", "test-project", "--location", "us-central1", "a2a-chat", "agent123"],
+        )
+        assert result.exit_code == 0
+        mock_run_a2a_chat.assert_called_once_with(
+            project="test-project",
+            location="us-central1",
+            agent_id="agent123",
+            debug=False,
+            base_url=None,
+            api_version=None,
+        )
+
+    @patch("agent_engine_cli.main.run_a2a_chat")
+    def test_a2a_chat_with_debug(self, mock_run_a2a_chat):
+        """Test a2a-chat command with debug flag."""
+        result = runner.invoke(
+            app,
+            ["--project", "test-project", "--location", "us-central1", "a2a-chat", "agent123", "--debug"],
+        )
+        assert result.exit_code == 0
+        mock_run_a2a_chat.assert_called_once_with(
+            project="test-project",
+            location="us-central1",
+            agent_id="agent123",
+            debug=True,
+            base_url=None,
+            api_version=None,
+        )
+
+    @patch("agent_engine_cli.main.run_a2a_chat")
+    def test_a2a_chat_error_handling(self, mock_run_a2a_chat):
+        """Test a2a-chat command handles errors gracefully."""
+        mock_run_a2a_chat.side_effect = Exception("Connection failed")
+
+        result = runner.invoke(
+            app,
+            ["--project", "test-project", "--location", "us-central1", "a2a-chat", "agent123"],
+        )
+        assert result.exit_code == 1
+        assert "Error in A2A chat session" in result.stdout
+
+    @patch("agent_engine_cli.main.run_a2a_chat")
+    @patch("agent_engine_cli.main.resolve_project")
+    def test_a2a_chat_uses_adc_project(self, mock_resolve, mock_run_a2a_chat):
+        """Test a2a-chat command uses ADC project when --project not provided."""
+        mock_resolve.return_value = "adc-project"
+
+        result = runner.invoke(app, ["--location", "us-central1", "a2a-chat", "agent1"])
+        assert result.exit_code == 0
+        mock_resolve.assert_called_once_with(None)
+        mock_run_a2a_chat.assert_called_once_with(
+            project="adc-project",
+            location="us-central1",
+            agent_id="agent1",
+            debug=False,
+            base_url=None,
+            api_version=None,
+        )
+
+    @patch("agent_engine_cli.main.run_a2a_chat")
+    def test_a2a_chat_with_custom_endpoint_options(self, mock_run_a2a_chat):
+        """Test a2a-chat command passes custom base_url and api_version."""
+        result = runner.invoke(app, [
+            "--project", "test-project", "--location", "us-central1",
+            "--base-url", "https://staging.example.com",
+            "--api-version", "v1",
+            "a2a-chat", "agent123"
+        ])
+        assert result.exit_code == 0
+        mock_run_a2a_chat.assert_called_once_with(
+            project="test-project",
+            location="us-central1",
+            agent_id="agent123",
+            debug=False,
+            base_url="https://staging.example.com",
+            api_version="v1",
+        )
+
+
 class TestEndpointOverrideOptions:
     """Tests for --base-url and --api-version options."""
 

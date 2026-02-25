@@ -11,6 +11,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from agent_engine_cli import __version__
+from agent_engine_cli.a2a_chat import run_a2a_chat
 from agent_engine_cli.chat import run_chat
 from agent_engine_cli.config import resolve_project
 from agent_engine_cli.dependencies import get_client
@@ -537,6 +538,30 @@ def chat(
         console.print("\n[yellow]Chat session ended.[/yellow]")
     except Exception as e:
         console.print(f"[red]Error in chat session: {escape(str(e))}[/red]")
+        raise typer.Exit(code=1)
+
+
+@app.command("a2a-chat")
+def a2a_chat(
+    agent_id: Annotated[str, typer.Argument(help="Agent ID or full resource name")],
+    debug: Annotated[bool, typer.Option("--debug", "-d", help="Enable verbose HTTP debug logging")] = False,
+) -> None:
+    """Start an interactive A2A chat session with an agent."""
+    project, location = _resolve_config()
+
+    try:
+        asyncio.run(run_a2a_chat(
+            project=project,
+            location=location,
+            agent_id=agent_id,
+            debug=debug,
+            base_url=state.base_url,
+            api_version=state.api_version,
+        ))
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Chat session ended.[/yellow]")
+    except Exception as e:
+        console.print(f"[red]Error in A2A chat session: {escape(str(e))}[/red]")
         raise typer.Exit(code=1)
 
 
