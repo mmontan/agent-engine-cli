@@ -5,18 +5,14 @@ from dataclasses import dataclass
 from typing import Annotated, Literal
 
 import typer
-from rich.console import Console
 from rich.markup import escape
 from rich.panel import Panel
 from rich.table import Table
 
 from agent_engine_cli import __version__
-from agent_engine_cli.a2a_chat import run_a2a_chat
-from agent_engine_cli.chat import run_chat
 from agent_engine_cli.config import resolve_project
+from agent_engine_cli.console import console
 from agent_engine_cli.dependencies import get_client
-
-console = Console()
 
 
 @dataclass
@@ -525,6 +521,7 @@ def chat(
     project, location = _resolve_config()
 
     try:
+        from agent_engine_cli.chat import run_chat
         asyncio.run(run_chat(
             project=project,
             location=location,
@@ -550,6 +547,7 @@ def a2a_chat(
     project, location = _resolve_config()
 
     try:
+        from agent_engine_cli.a2a_chat import run_a2a_chat
         asyncio.run(run_a2a_chat(
             project=project,
             location=location,

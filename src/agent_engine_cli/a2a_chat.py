@@ -10,11 +10,10 @@ import warnings
 from dataclasses import dataclass, field
 from typing import Any
 
-from rich.console import Console
 from rich.markup import escape
 from rich.panel import Panel
 
-console = Console()
+from agent_engine_cli.console import console
 
 HELP_TEXT = """\
 Slash commands:

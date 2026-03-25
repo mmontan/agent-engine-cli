@@ -265,7 +265,7 @@ class TestChatCommand:
         assert "--user" in result.stdout
         assert "--debug" in result.stdout
 
-    @patch("agent_engine_cli.main.run_chat")
+    @patch("agent_engine_cli.chat.run_chat")
     def test_chat_invokes_run_chat(self, mock_run_chat):
         """Test chat command invokes run_chat with correct arguments."""
         result = runner.invoke(
@@ -283,7 +283,7 @@ class TestChatCommand:
             api_version=None,
         )
 
-    @patch("agent_engine_cli.main.run_chat")
+    @patch("agent_engine_cli.chat.run_chat")
     def test_chat_with_user_and_debug(self, mock_run_chat):
         """Test chat command with custom user and debug flag."""
         result = runner.invoke(
@@ -302,7 +302,7 @@ class TestChatCommand:
             api_version=None,
         )
 
-    @patch("agent_engine_cli.main.run_chat")
+    @patch("agent_engine_cli.chat.run_chat")
     def test_chat_error_handling(self, mock_run_chat):
         """Test chat command handles errors gracefully."""
         mock_run_chat.side_effect = Exception("Connection failed")
@@ -382,7 +382,7 @@ class TestADCFallback:
         assert result.exit_code == 0
         mock_resolve.assert_called_once_with(None)
 
-    @patch("agent_engine_cli.main.run_chat")
+    @patch("agent_engine_cli.chat.run_chat")
     @patch("agent_engine_cli.main.resolve_project")
     def test_chat_uses_adc_project(self, mock_resolve, mock_run_chat):
         """Test chat command uses ADC project when --project not provided."""
@@ -652,7 +652,7 @@ class TestA2AChatCommand:
         assert "--debug" in result.stdout
         assert "AGENT_ID" in result.stdout
 
-    @patch("agent_engine_cli.main.run_a2a_chat")
+    @patch("agent_engine_cli.a2a_chat.run_a2a_chat")
     def test_a2a_chat_invokes_run_a2a_chat(self, mock_run_a2a_chat):
         """Test a2a-chat command invokes run_a2a_chat with correct arguments."""
         result = runner.invoke(
@@ -669,7 +669,7 @@ class TestA2AChatCommand:
             api_version=None,
         )
 
-    @patch("agent_engine_cli.main.run_a2a_chat")
+    @patch("agent_engine_cli.a2a_chat.run_a2a_chat")
     def test_a2a_chat_with_debug(self, mock_run_a2a_chat):
         """Test a2a-chat command with debug flag."""
         result = runner.invoke(
@@ -686,7 +686,7 @@ class TestA2AChatCommand:
             api_version=None,
         )
 
-    @patch("agent_engine_cli.main.run_a2a_chat")
+    @patch("agent_engine_cli.a2a_chat.run_a2a_chat")
     def test_a2a_chat_error_handling(self, mock_run_a2a_chat):
         """Test a2a-chat command handles errors gracefully."""
         mock_run_a2a_chat.side_effect = Exception("Connection failed")
@@ -698,7 +698,7 @@ class TestA2AChatCommand:
         assert result.exit_code == 1
         assert "Error in A2A chat session" in result.stdout
 
-    @patch("agent_engine_cli.main.run_a2a_chat")
+    @patch("agent_engine_cli.a2a_chat.run_a2a_chat")
     @patch("agent_engine_cli.main.resolve_project")
     def test_a2a_chat_uses_adc_project(self, mock_resolve, mock_run_a2a_chat):
         """Test a2a-chat command uses ADC project when --project not provided."""
@@ -716,7 +716,7 @@ class TestA2AChatCommand:
             api_version=None,
         )
 
-    @patch("agent_engine_cli.main.run_a2a_chat")
+    @patch("agent_engine_cli.a2a_chat.run_a2a_chat")
     def test_a2a_chat_with_custom_endpoint_options(self, mock_run_a2a_chat):
         """Test a2a-chat command passes custom base_url and api_version."""
         result = runner.invoke(app, [
@@ -760,7 +760,7 @@ class TestEndpointOverrideOptions:
             api_version="v1",
         )
 
-    @patch("agent_engine_cli.main.run_chat")
+    @patch("agent_engine_cli.chat.run_chat")
     def test_chat_with_custom_endpoint_options(self, mock_run_chat):
         """Test chat command passes custom base_url and api_version to run_chat."""
         result = runner.invoke(app, [

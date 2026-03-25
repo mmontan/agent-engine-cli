@@ -1,8 +1,6 @@
 """Configuration utilities for Agent Engine CLI."""
 
-from rich.console import Console
-
-console = Console()
+from agent_engine_cli.console import console
 
 
 class ConfigurationError(Exception):

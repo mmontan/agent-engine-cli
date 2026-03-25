@@ -8,10 +8,9 @@ import os
 import warnings
 from typing import Any
 
-from rich.console import Console
 from rich.markup import escape
 
-console = Console()
+from agent_engine_cli.console import console
 
 
 def _format_tool_args(args: dict | None) -> str:
